@@ -1,7 +1,21 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { nowTime } from "@/lib/format";
+import { caregiver } from "@/lib/mock/caregivers";
+import { mutate, newId, useDemo } from "@/lib/store";
+import { useComposer } from "@/lib/useComposer";
 
 export default function ReportStatusScreen() {
+  const demo = useDemo();
+  const report = demo.reports[0];
+  const cg = caregiver(report?.caregiverId ?? "nirmala");
+  const reply = useComposer((text) =>
+    mutate((d) => {
+      d.safetyChat.push({ id: newId("m"), from: "me", text: text.trim(), time: nowTime() });
+    }),
+  );
   return (
     <div
       style={{
@@ -89,10 +103,10 @@ export default function ReportStatusScreen() {
                     letterSpacing: "-0.025em",
                   }}
                 >
-                  Report GL-20418
+                  {`Report ${report?.ref ?? "GL-20418"}`}
                 </h1>
                 <span style={{ fontSize: "15px", color: "#545454" }}>
-                  Nirmala Perera · Theft or missing items · sent today 10:42
+                  {`${cg.name} · ${report?.reason ?? "Theft or missing items"} · sent ${report?.sent ?? "today 10:42"}`}
                 </span>
               </div>
             </div>
@@ -159,8 +173,25 @@ export default function ReportStatusScreen() {
               >
                 Saturday morning around 8:30, before the visit.
               </div>
+              {demo.safetyChat.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    alignSelf: "flex-end",
+                    maxWidth: "520px",
+                    padding: "10px 14px",
+                    borderRadius: "18px 18px 6px 18px",
+                    background: "#000000",
+                    color: "#FFFFFF",
+                    fontSize: "14px",
+                    lineHeight: "1.45",
+                  }}
+                >
+                  {m.text}
+                </div>
+              ))}
             </div>
-            <form style={{ display: "flex", gap: "8px" }}>
+            <form onSubmit={reply.submit} style={{ display: "flex", gap: "8px" }}>
               <label
                 style={{
                   flex: "1",
@@ -176,6 +207,8 @@ export default function ReportStatusScreen() {
                 <input
                   aria-label="Reply to safety team"
                   placeholder="Reply to the safety team"
+                  value={reply.value}
+                  onChange={reply.onChange}
                   style={{
                     flex: "1",
                     minWidth: "0",
@@ -187,7 +220,7 @@ export default function ReportStatusScreen() {
                 />
               </label>
               <button
-                type="button"
+                type="submit"
                 style={{
                   height: "40px",
                   padding: "0 18px",

@@ -5,6 +5,12 @@ import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { bookDraft, cardShort, selectCaregiver, slotToDraft } from "@/lib/actions";
+import { fee, lkr } from "@/lib/format";
+import { caregiver } from "@/lib/mock/caregivers";
+import { backups } from "@/lib/selectors";
+import { mutate, useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -12,6 +18,8 @@ class Logic extends DCLogic {
     this.state = { s: 0, backup: true };
   }
   renderVals() {
+    const { demo, router } = this.props;
+    const cg = caregiver(demo.selectedCaregiver);
     const tg = (k) => {
       const on = this.state[k];
       return {
@@ -21,12 +29,7 @@ class Logic extends DCLogic {
         flip: () => this.setState({ [k]: !on }),
       };
     };
-    const L = [
-      ["Sat 17", "9:00 AM"],
-      ["Mon 19", "9:00 AM"],
-      ["Tue 20", "2:00 PM"],
-      ["Sat 24", "9:00 AM"],
-    ];
+    const L = cg.slots;
     const slots = L.map((s, i) => {
       const on = this.state.s === i;
       return {
@@ -38,12 +41,43 @@ class Logic extends DCLogic {
         pick: () => this.setState({ s: i }),
       };
     });
-    return { slots, backup: tg("backup"), when: L[this.state.s][0] + " Oct · " + L[this.state.s][1] };
+    const slot = L[Math.min(this.state.s, L.length - 1)];
+    const card = demo.cards.find((c) => c.id === demo.defaultCard) ?? demo.cards[0];
+    const method = card ? cardShort(card) : "Card from abroad";
+    const sub = 3 * cg.rate;
+    const total = lkr(sub + fee(sub));
+    const others = backups(demo, cg.id);
+    return {
+      cg,
+      slots,
+      backup: tg("backup"),
+      when: slot[0] + " Oct · " + slot[1],
+      method: " · " + method,
+      title: `Book ${cg.first} again`,
+      free: `${cg.first} is free`,
+      backupNote: `${others.join(", then ")} · same price or less`,
+      cta: `Book · ${total}`,
+      book: (e) => {
+        e.preventDefault();
+        selectCaregiver(cg.id);
+        slotToDraft(slot[0], slot[1]);
+        mutate((d) => {
+          d.draft.help = "Companionship";
+          d.draft.hours = 3;
+          d.draft.weekly = false;
+          d.promo = null;
+        });
+        bookDraft(method);
+        router.push("/confirmed");
+      },
+    };
   }
 }
 
 export default function RebookScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { demo, router } });
   return (
     <div
       style={{
@@ -118,7 +152,7 @@ export default function RebookScreen() {
         >
           <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
             <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "4px" }}>
-              <span style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.02em" }}>Book Nirmala again</span>
+              <span style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.02em" }}>{v.title}</span>
               <span style={{ fontSize: "14px", color: "#545454" }}>Same as last time · you can change anything</span>
             </span>
             <Link
@@ -151,7 +185,7 @@ export default function RebookScreen() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <img
-              src="/images/nirmala.png"
+              src={v.cg.avatar}
               alt=""
               style={{
                 width: "52px",
@@ -163,7 +197,7 @@ export default function RebookScreen() {
               }}
             />
             <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              <span style={{ fontSize: "16px", fontWeight: "800" }}>Nirmala Perera</span>
+              <span style={{ fontSize: "16px", fontWeight: "800" }}>{v.cg.name}</span>
               <span style={{ fontSize: "13px", color: "#545454" }}>★ 4.9 · 18 visits with Amma</span>
             </span>
           </div>
@@ -213,7 +247,7 @@ export default function RebookScreen() {
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <span style={{ fontSize: "13px", fontWeight: "600" }}>Nirmala is free</span>
+            <span style={{ fontSize: "13px", fontWeight: "600" }}>{v.free}</span>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "6px" }}>
               {v.slots.map((s: any, i1: number) => (
                 <Fragment key={i1}>
@@ -262,7 +296,7 @@ export default function RebookScreen() {
                 <span style={{ fontSize: "14px", fontWeight: "700" }}>
                   {"If she can't, ask my other saved caregivers"}
                 </span>
-                <span style={{ fontSize: "13px", color: "#545454" }}>Shanthi, then Mala · same price or less</span>
+                <span style={{ fontSize: "13px", color: "#545454" }}>{v.backupNote}</span>
               </span>
               <span
                 style={{
@@ -284,10 +318,11 @@ export default function RebookScreen() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
             <span style={{ fontSize: "12px", color: "#545454" }}>
               {v.when}
-              {" · Visa ·· 4417"}
+              {v.method}
             </span>
             <Link
               href="/confirmed"
+              onClick={v.book}
               style={{
                 height: "44px",
                 padding: "0 22px",
@@ -304,7 +339,7 @@ export default function RebookScreen() {
                 whiteSpace: "nowrap",
               }}
             >
-              Book · LKR 3,960
+              {v.cta}
             </Link>
           </div>
         </div>

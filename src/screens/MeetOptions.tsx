@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -431,6 +432,7 @@ export default function MeetOptionsScreen() {
               </Link>
               <Link
                 href="/meet-booked"
+                onClick={() => toast("Call invite sent")}
                 style={{
                   height: "44px",
                   padding: "0 22px",

@@ -1,7 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { caregiver } from "@/lib/mock/caregivers";
+import { useDemo } from "@/lib/store";
 
 export default function ReportSentScreen() {
+  const demo = useDemo();
+  const report = demo.reports[0];
+  const cg = caregiver(report?.caregiverId ?? "nirmala");
+  const blocked = demo.ui.lastReport?.block ?? true;
   return (
     <div
       style={{
@@ -94,7 +102,7 @@ export default function ReportSentScreen() {
                   color: "#05663A",
                 }}
               >
-                Report GL-20418 sent
+                {`Report ${report?.ref ?? "GL-20418"} sent`}
               </span>
               <h1
                 style={{
@@ -137,7 +145,11 @@ export default function ReportSentScreen() {
               >
                 <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"></path>
               </svg>
-              <span>Nirmala is blocked and LKR 3,960 is on hold in escrow.</span>
+              <span>
+                {blocked
+                  ? `${cg.first} is blocked and her payment is on hold in escrow.`
+                  : `${cg.first}'s payment is on hold in escrow while we review.`}
+              </span>
             </div>
             <div style={{ display: "flex", gap: "10px" }}>
               <Link

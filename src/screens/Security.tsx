@@ -4,6 +4,9 @@ import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { maskPhone } from "@/lib/format";
+import { mutate, useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -25,7 +28,22 @@ class Logic extends DCLogic {
 }
 
 export default function SecurityScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v: Record<string, any> = { ...useLogic(Logic, { persist: "security" }), devices: demo.devices };
+  const signOut = (id: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    mutate((d) => {
+      d.devices = d.devices.filter((x) => x !== id);
+    });
+    toast("Signed out of that device");
+  };
+  const signOutOthers = (e: React.MouseEvent) => {
+    e.preventDefault();
+    mutate((d) => {
+      d.devices = ["this"];
+    });
+    toast("Signed out everywhere else");
+  };
   return (
     <div
       style={{
@@ -95,7 +113,7 @@ export default function SecurityScreen() {
                       <path d="M5 4h3.5l1.5 4.5-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"></path>
                     </svg>
                     <span style={{ flex: "1", fontSize: "14px", fontWeight: "700" }}>Mobile number</span>
-                    <span style={{ fontSize: "13px", color: "#545454" }}>+94 77 ••• 4120</span>
+                    <span style={{ fontSize: "13px", color: "#545454" }}>{maskPhone(demo.account.phone)}</span>
                     <span style={{ color: "#545454", display: "flex" }}>
                       <svg
                         width="16"
@@ -325,105 +343,116 @@ export default function SecurityScreen() {
                       Active
                     </span>
                   </div>
-                  <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px" }}>
-                    <span
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "18px",
-                        background: "#EEEEEE",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <rect x="7" y="3" width="10" height="18" rx="2"></rect>
-                        <path d="M11 18h2"></path>
-                      </svg>
-                    </span>
-                    <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                      <span style={{ fontSize: "14px", fontWeight: "700" }}>Samsung A54</span>
-                      <span style={{ fontSize: "12px", color: "#545454" }}>Colombo · 9:12 AM</span>
-                    </span>
-                    <a
-                      href="#"
-                      style={{
-                        height: "30px",
-                        padding: "0 12px",
-                        borderRadius: "15px",
-                        background: "#EEEEEE",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        fontSize: "12px",
-                        fontWeight: "600",
-                      }}
-                    >
-                      Sign out
-                    </a>
-                  </div>
-                  <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px" }}>
-                    <span
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "18px",
-                        background: "#EEEEEE",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <rect x="4" y="5" width="16" height="11" rx="1.5"></rect>
-                        <path d="M2 19h20"></path>
-                      </svg>
-                    </span>
-                    <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                      <span style={{ fontSize: "14px", fontWeight: "700" }}>Safari on iPad</span>
-                      <span style={{ fontSize: "12px", color: "#545454" }}>Melbourne · Mon</span>
-                    </span>
-                    <a
-                      href="#"
-                      style={{
-                        height: "30px",
-                        padding: "0 12px",
-                        borderRadius: "15px",
-                        background: "#EEEEEE",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        fontSize: "12px",
-                        fontWeight: "600",
-                      }}
-                    >
-                      Sign out
-                    </a>
-                  </div>
+                  {v.devices.includes("samsung") ? (
+                    <>
+                      <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px" }}>
+                        <span
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "18px",
+                            background: "#EEEEEE",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <rect x="7" y="3" width="10" height="18" rx="2"></rect>
+                            <path d="M11 18h2"></path>
+                          </svg>
+                        </span>
+                        <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span style={{ fontSize: "14px", fontWeight: "700" }}>Samsung A54</span>
+                          <span style={{ fontSize: "12px", color: "#545454" }}>Colombo · 9:12 AM</span>
+                        </span>
+                        <a
+                          href="#"
+                          onClick={signOut("samsung")}
+                          style={{
+                            height: "30px",
+                            padding: "0 12px",
+                            borderRadius: "15px",
+                            background: "#EEEEEE",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                          }}
+                        >
+                          Sign out
+                        </a>
+                      </div>
+                    </>
+                  ) : null}
+                  {v.devices.includes("ipad") ? (
+                    <>
+                      <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px" }}>
+                        <span
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "18px",
+                            background: "#EEEEEE",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <rect x="4" y="5" width="16" height="11" rx="1.5"></rect>
+                            <path d="M2 19h20"></path>
+                          </svg>
+                        </span>
+                        <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span style={{ fontSize: "14px", fontWeight: "700" }}>Safari on iPad</span>
+                          <span style={{ fontSize: "12px", color: "#545454" }}>Melbourne · Mon</span>
+                        </span>
+                        <a
+                          href="#"
+                          onClick={signOut("ipad")}
+                          style={{
+                            height: "30px",
+                            padding: "0 12px",
+                            borderRadius: "15px",
+                            background: "#EEEEEE",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                          }}
+                        >
+                          Sign out
+                        </a>
+                      </div>
+                    </>
+                  ) : null}
                 </div>
                 <Link
                   href="/security"
+                  onClick={signOutOthers}
                   style={{
                     height: "40px",
                     padding: "0 18px",

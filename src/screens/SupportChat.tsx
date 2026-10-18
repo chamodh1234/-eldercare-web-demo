@@ -1,7 +1,35 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { useEffect, useRef } from "react";
+import { nowTime } from "@/lib/format";
+import { mutate, newId, useDemo } from "@/lib/store";
+import { useComposer } from "@/lib/useComposer";
+
+const REPLY = "Thanks, I've got that. I'm checking now and will reply here in a couple of minutes.";
 
 export default function SupportChatScreen() {
+  const demo = useDemo();
+  const file = useRef<HTMLInputElement>(null);
+  const end = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "nearest" });
+  }, [demo.supportChat.length]);
+  const say = (text: string) => {
+    mutate((d) => {
+      d.supportChat.push({ id: newId("m"), from: "me", text, time: nowTime() });
+    });
+    // Mock support: a short acknowledgement from the agent.
+    setTimeout(
+      () =>
+        mutate((d) => {
+          d.supportChat.push({ id: newId("m"), from: "them", text: REPLY, time: nowTime() });
+        }),
+      1200,
+    );
+  };
+  const composer = useComposer(say);
   return (
     <div
       style={{
@@ -150,7 +178,7 @@ export default function SupportChatScreen() {
                 display: "flex",
                 flexDirection: "column",
                 gap: "10px",
-                overflow: "hidden",
+                overflowY: "auto",
               }}
             >
               <div
@@ -167,7 +195,9 @@ export default function SupportChatScreen() {
                 {"Hi Dilani, I'm the Gloocan assistant. What do you need help with?"}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                <span
+                <button
+                  type="button"
+                  onClick={() => say("Change a visit")}
                   style={{
                     height: "32px",
                     padding: "0 12px",
@@ -177,11 +207,16 @@ export default function SupportChatScreen() {
                     alignItems: "center",
                     fontSize: "13px",
                     fontWeight: "600",
+                    background: "#FFFFFF",
+                    color: "#000000",
+                    fontFamily: "var(--font-figtree), sans-serif",
                   }}
                 >
                   Change a visit
-                </span>
-                <span
+                </button>
+                <button
+                  type="button"
+                  onClick={() => say("Refund")}
                   style={{
                     height: "32px",
                     padding: "0 12px",
@@ -191,11 +226,16 @@ export default function SupportChatScreen() {
                     alignItems: "center",
                     fontSize: "13px",
                     fontWeight: "600",
+                    background: "#FFFFFF",
+                    color: "#000000",
+                    fontFamily: "var(--font-figtree), sans-serif",
                   }}
                 >
                   Refund
-                </span>
-                <span
+                </button>
+                <button
+                  type="button"
+                  onClick={() => say("Caregiver issue")}
                   style={{
                     height: "32px",
                     padding: "0 12px",
@@ -205,11 +245,16 @@ export default function SupportChatScreen() {
                     alignItems: "center",
                     fontSize: "13px",
                     fontWeight: "600",
+                    background: "#FFFFFF",
+                    color: "#000000",
+                    fontFamily: "var(--font-figtree), sans-serif",
                   }}
                 >
                   Caregiver issue
-                </span>
-                <span
+                </button>
+                <button
+                  type="button"
+                  onClick={() => say("Something else")}
                   style={{
                     height: "32px",
                     padding: "0 12px",
@@ -219,10 +264,13 @@ export default function SupportChatScreen() {
                     alignItems: "center",
                     fontSize: "13px",
                     fontWeight: "600",
+                    background: "#FFFFFF",
+                    color: "#000000",
+                    fontFamily: "var(--font-figtree), sans-serif",
                   }}
                 >
                   Something else
-                </span>
+                </button>
               </div>
               <div
                 style={{
@@ -305,11 +353,45 @@ export default function SupportChatScreen() {
               >
                 Thank you, that makes sense.
               </div>
+              {demo.supportChat.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    alignSelf: m.from === "me" ? "flex-end" : "flex-start",
+                    maxWidth: "460px",
+                    padding: "10px 14px",
+                    borderRadius: m.from === "me" ? "18px 18px 6px 18px" : "18px 18px 18px 6px",
+                    background: m.from === "me" ? "#000000" : "#EEEEEE",
+                    color: m.from === "me" ? "#FFFFFF" : "#000000",
+                    fontSize: "14px",
+                    lineHeight: "1.45",
+                    whiteSpace: "pre-wrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  {m.text}
+                </div>
+              ))}
+              <div ref={end}></div>
             </div>
-            <form style={{ display: "flex", gap: "8px", padding: "12px", borderTop: "1px solid #E2E2E2" }}>
+            <form
+              onSubmit={composer.submit}
+              style={{ display: "flex", gap: "8px", padding: "12px", borderTop: "1px solid #E2E2E2" }}
+            >
+              <input
+                ref={file}
+                type="file"
+                hidden
+                onChange={(e) => {
+                  const name = e.target.files?.[0]?.name;
+                  if (name) say(`Attachment · ${name}`);
+                  e.target.value = "";
+                }}
+              />
               <button
                 type="button"
                 aria-label="Attach"
+                onClick={() => file.current?.click()}
                 style={{
                   width: "40px",
                   height: "40px",
@@ -351,6 +433,8 @@ export default function SupportChatScreen() {
                 <input
                   aria-label="Message support"
                   placeholder="Message"
+                  value={composer.value}
+                  onChange={composer.onChange}
                   style={{
                     flex: "1",
                     minWidth: "0",
@@ -362,7 +446,7 @@ export default function SupportChatScreen() {
                 />
               </label>
               <button
-                type="button"
+                type="submit"
                 aria-label="Send"
                 style={{
                   width: "40px",

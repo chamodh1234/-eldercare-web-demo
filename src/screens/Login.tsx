@@ -1,6 +1,23 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "@/components/Toaster";
+import { mutate, useDemo } from "@/lib/store";
 
 export default function LoginScreen() {
+  const demo = useDemo();
+  const router = useRouter();
+  const [phone, setPhone] = useState<string>(demo.ui.loginPhone ?? "77 512 4120");
+  const next = (e: React.MouseEvent | React.FormEvent) => {
+    e.preventDefault();
+    if (phone.replace(/\D/g, "").length < 9) return toast("Enter your mobile number");
+    mutate((d) => {
+      d.ui.loginPhone = phone.trim();
+    });
+    router.push("/otp");
+  };
   return (
     <div
       style={{
@@ -208,7 +225,10 @@ export default function LoginScreen() {
                   </svg>
                 </span>
                 <input
-                  defaultValue="77 512 4120"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && next(e)}
                   style={{
                     flex: "1",
                     minWidth: "0",
@@ -223,6 +243,7 @@ export default function LoginScreen() {
             </label>
             <Link
               href="/otp"
+              onClick={next}
               style={{
                 height: "44px",
                 padding: "0 22px",

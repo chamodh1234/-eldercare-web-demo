@@ -1,7 +1,33 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { toast } from "@/components/Toaster";
+import { lkr } from "@/lib/format";
+import { jobDraft } from "@/lib/selectors";
+import { mutate, newId, useDemo } from "@/lib/store";
 
 export default function JobReviewScreen() {
+  const demo = useDemo();
+  const job = jobDraft(demo);
+  const publish = () => {
+    const id = newId("j");
+    mutate((d) => {
+      d.jobs = d.jobs.filter((j) => !(j.status === "Draft" && j.title === job.title));
+      d.jobs.unshift({
+        id,
+        title: job.title.split(",")[0],
+        help: job.kind.replace(" / live-in", ""),
+        rate: `${lkr(job.rate)}/hr`,
+        schedule: job.schedule,
+        status: "Live",
+        applicants: "4 new",
+      });
+      d.ui.selectedJob = id;
+      d.rejected = [];
+    });
+    toast("Job published · caregivers near Colombo 05 can apply");
+  };
   return (
     <div
       style={{
@@ -62,80 +88,29 @@ export default function JobReviewScreen() {
             </div>
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
               <div style={{ padding: "18px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                <span style={{ fontSize: "18px", fontWeight: "800" }}>Morning companion for Amma, 3 hrs, Mon–Sat</span>
-                <span style={{ fontSize: "14px", color: "#545454", lineHeight: "1.5" }}>
-                  Amma is 78 and recovering from a knee injury. We need someone patient for mornings: a short walk, tea,
-                  knee exercises and lunch.
-                </span>
+                <span style={{ fontSize: "18px", fontWeight: "800" }}>{job.title}</span>
+                <span style={{ fontSize: "14px", color: "#545454", lineHeight: "1.5" }}>{job.desc}</span>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", paddingTop: "6px" }}>
-                  <span
-                    style={{
-                      height: "24px",
-                      padding: "0 10px",
-                      borderRadius: "12px",
-                      background: "#EEEEEE",
-                      color: "#333333",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Companionship
-                  </span>
-                  <span
-                    style={{
-                      height: "24px",
-                      padding: "0 10px",
-                      borderRadius: "12px",
-                      background: "#EEEEEE",
-                      color: "#333333",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Walking support
-                  </span>
-                  <span
-                    style={{
-                      height: "24px",
-                      padding: "0 10px",
-                      borderRadius: "12px",
-                      background: "#EEEEEE",
-                      color: "#333333",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Medicine reminders
-                  </span>
-                  <span
-                    style={{
-                      height: "24px",
-                      padding: "0 10px",
-                      borderRadius: "12px",
-                      background: "#EEEEEE",
-                      color: "#333333",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Sinhala
-                  </span>
+                  {job.tags.map((t) => (
+                    <span
+                      key={t}
+                      style={{
+                        height: "24px",
+                        padding: "0 10px",
+                        borderRadius: "12px",
+                        background: "#EEEEEE",
+                        color: "#333333",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontSize: "12px",
+                        fontWeight: "700",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {t}
+                    </span>
+                  ))}
                 </div>
               </div>
               <div style={{ height: "1px", background: "#E2E2E2" }}></div>
@@ -168,7 +143,7 @@ export default function JobReviewScreen() {
               >
                 <span style={{ color: "#545454" }}>When</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  Mon–Sat · 9:00 – 12:00
+                  {job.when}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
                     From Mon 12 Oct · 4 weeks
                   </span>
@@ -186,9 +161,9 @@ export default function JobReviewScreen() {
               >
                 <span style={{ color: "#545454" }}>Rate</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  LKR 1,200 / hr
+                  {job.rateLabel}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                    About LKR 23,760 a week incl. fee
+                    {`About ${job.weekly} a week incl. fee`}
                   </span>
                 </span>
               </div>
@@ -209,6 +184,7 @@ export default function JobReviewScreen() {
             <div style={{ display: "flex", gap: "10px" }}>
               <Link
                 href="/applicants"
+                onClick={publish}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -268,7 +244,7 @@ export default function JobReviewScreen() {
             <span style={{ fontSize: "14px", lineHeight: "1.5", color: "#333333" }}>
               {"About "}
               <b>48 verified caregivers</b>
-              {" within 5 km who do companionship and speak Sinhala."}
+              {` within 5 km who do ${job.kind.toLowerCase()}${job.langs.length ? " and speak " + job.langs.join(" or ") : ""}.`}
             </span>
             <div
               style={{

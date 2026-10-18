@@ -17,6 +17,10 @@
   font-size: 15px;
 }
 
+.actions {
+  margin: -8px 0 24px;
+}
+
 .list {
   list-style: none;
   margin: 0;

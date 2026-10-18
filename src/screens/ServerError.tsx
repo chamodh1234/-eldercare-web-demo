@@ -1,7 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/Toaster";
 
 export default function ServerErrorScreen() {
+  const router = useRouter();
+  const retry = (e: React.MouseEvent) => {
+    e.preventDefault();
+    toast("Trying again…");
+    if (window.history.length > 1) router.back();
+    else router.push("/visits");
+  };
   return (
     <div
       style={{
@@ -74,6 +85,7 @@ export default function ServerErrorScreen() {
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "10px", marginTop: "6px" }}>
             <Link
               href="/server-error"
+              onClick={retry}
               style={{
                 height: "44px",
                 padding: "0 22px",

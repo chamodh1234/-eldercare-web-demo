@@ -4,70 +4,98 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { addDays, dayLabel, dayNum, dow, shortDate, TODAY } from "@/lib/format";
+import { liveTasks } from "@/lib/selectors";
+import { mutate, useDemo } from "@/lib/store";
+
+// The weekly booking runs Mon 12 Oct – Sat 7 Nov, Mon–Sat.
+const FIRST_MONDAY = "2026-10-12";
+const WEEKS = 4;
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { day: 3 };
+    this.state = { week: 0, day: 3 };
   }
   renderVals() {
-    const D = [
-      ["Mon", 12],
-      ["Tue", 13],
-      ["Wed", 14],
-      ["Thu", 15],
-      ["Fri", 16],
-      ["Sat", 17],
-    ];
-    const ONE = {
-      3: [["11:00", "Let the electrician in", "Today · from Dilani 6:05", "Seen 6:12"]],
-      5: [["10:00", "Aunty Rani visits · tea for two", "Use the good cups", "Planned"]],
-      1: [],
-      0: [],
-      2: [],
-      4: [["9:30", "Physio comes · stay with Amma", "Added by Ruwan", "Planned"]],
-    };
-    const days = D.map((d, i) => {
-      const on = this.state.day === i;
-      const today = i === 3;
-      const extra = ONE[i] || [];
+    const { demo } = this.props;
+    const week = Math.min(Math.max(this.state.week, 0), WEEKS - 1);
+    const monday = addDays(FIRST_MONDAY, week * 7);
+    const D = Array.from({ length: 6 }, (_, i) => addDays(monday, i));
+    const sel = Math.min(this.state.day, 5);
+    const dayTasks = (iso) =>
+      demo.tasks.filter((t) => t.kind === "day" && t.date === iso).sort((a, b) => a.time.localeCompare(b.time));
+    const booking = demo.tasks.filter((t) => t.kind === "booking");
+    const routine = demo.tasks.filter((t) => t.kind === "routine");
+    const live = liveTasks(demo);
+    const perDay = routine.length + booking.length;
+    const days = D.map((iso, i) => {
+      const on = sel === i;
+      const today = iso === TODAY;
+      const extra = dayTasks(iso);
+      const count = perDay + extra.length;
       return {
-        dow: d[0],
-        num: d[1],
+        dow: dow(iso),
+        num: dayNum(iso),
         pressed: on ? "true" : "false",
         border: on ? "2px solid #000000" : "1px solid #E2E2E2",
         headBg: today ? "#000000" : "#F6F6F6",
         headFg: today ? "#FFFFFF" : "#000000",
         tag: today ? "Today" : "",
-        extras: extra.map((e) => ({ time: e[0], title: e[1] })),
+        extras: extra.map((e) => ({ time: e.time, title: e.title })),
         hasExtra: extra.length > 0,
-        done: i < 3 ? "Done · 7 of 7" : i === 3 ? "3 of 8 done" : "6 tasks",
-        doneFg: i < 3 ? "#05663A" : "#545454",
+        done:
+          iso < TODAY
+            ? `Done · ${count} of ${count}`
+            : today
+              ? `${live.done} of ${live.all.length} done`
+              : `${count} tasks`,
+        doneFg: iso < TODAY ? "#05663A" : "#545454",
         pick: () => this.setState({ day: i }),
       };
     });
-    const sel = this.state.day;
-    const one = (ONE[sel] || []).map((e, i) => ({
-      time: e[0],
-      title: e[1],
-      note: e[2],
-      tag: e[3],
-      tagBg: e[3].startsWith("Seen") ? "#E6F4EC" : "#EEEEEE",
-      tagFg: e[3].startsWith("Seen") ? "#05663A" : "#333333",
-      sep: i === 0 ? "none" : "1px solid #E2E2E2",
-    }));
+    const selIso = D[sel];
+    const one = dayTasks(selIso).map((e, i) => {
+      const tag = e.seen ? `Seen ${e.seen}` : "Planned";
+      return {
+        time: e.time,
+        title: e.title,
+        note: e.note,
+        tag,
+        tagBg: e.seen ? "#E6F4EC" : "#EEEEEE",
+        tagFg: e.seen ? "#05663A" : "#333333",
+        sep: i === 0 ? "none" : "1px solid #E2E2E2",
+      };
+    });
+    const last = addDays(monday, 5);
     return {
       days,
       one,
       hasOne: one.length > 0,
       noOne: one.length === 0,
-      selTitle: D[sel][0] + " " + D[sel][1] + " Oct" + (sel === 3 ? " · today" : ""),
+      selTitle: dayLabel(selIso) + (selIso === TODAY ? " · today" : ""),
+      range: `${dayNum(monday)} – ${dayNum(last)} ${shortDate(last).split(" ")[1]}`,
+      prev: () => this.setState({ week: Math.max(0, week - 1) }),
+      next: () => this.setState({ week: Math.min(WEEKS - 1, week + 1) }),
+      atStart: week === 0,
+      atEnd: week === WEEKS - 1,
+      bookingCard: booking[0]?.title.replace(/ from physio$/, ""),
+      bookingTime: booking[0] ? `${booking[0].time} · this booking` : "",
+      hasBooking: booking.length > 0,
+      booking: booking.map((t, i) => ({ ...t, sep: i > 0 })),
+      routineShort: routine.map((t) => (t.short ?? t.title).replace(/ reminder$/, "")).join(" · "),
+      routineLine: routine.map((t) => `${t.short ?? t.title} ${t.time}`.replace(" reminder", "")).join(" · "),
+      addForDay: () =>
+        mutate((d) => {
+          d.ui.addTask = { w: 2, date: selIso };
+        }),
     };
   }
 }
 
 export default function CarePlanScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo }, persist: "carePlan" });
   return (
     <div
       style={{
@@ -142,9 +170,11 @@ export default function CarePlanScreen() {
                 padding: "0 6px",
               }}
             >
-              <Link
-                href="/care-plan"
+              <button
+                type="button"
                 aria-label="Previous week"
+                onClick={v.prev}
+                disabled={v.atStart}
                 style={{
                   width: "30px",
                   height: "30px",
@@ -152,6 +182,11 @@ export default function CarePlanScreen() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  border: "none",
+                  background: "transparent",
+                  color: "#000000",
+                  padding: "0",
+                  opacity: v.atStart ? 0.35 : 1,
                 }}
               >
                 <svg
@@ -167,11 +202,13 @@ export default function CarePlanScreen() {
                 >
                   <path d="M15 18l-6-6 6-6"></path>
                 </svg>
-              </Link>
-              <span style={{ fontSize: "14px", fontWeight: "700", padding: "0 6px" }}>12 – 17 Oct</span>
-              <Link
-                href="/care-plan"
+              </button>
+              <span style={{ fontSize: "14px", fontWeight: "700", padding: "0 6px" }}>{v.range}</span>
+              <button
+                type="button"
                 aria-label="Next week"
+                onClick={v.next}
+                disabled={v.atEnd}
                 style={{
                   width: "30px",
                   height: "30px",
@@ -179,6 +216,11 @@ export default function CarePlanScreen() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  border: "none",
+                  background: "transparent",
+                  color: "#000000",
+                  padding: "0",
+                  opacity: v.atEnd ? 0.35 : 1,
                 }}
               >
                 <svg
@@ -194,7 +236,7 @@ export default function CarePlanScreen() {
                 >
                   <path d="M9 6l6 6-6 6"></path>
                 </svg>
-              </Link>
+              </button>
             </span>
             <Link
               href="/routine"
@@ -342,21 +384,21 @@ export default function CarePlanScreen() {
                           ))}
                         </>
                       ) : null}
-                      <span
-                        style={{
-                          borderRadius: "10px",
-                          background: "#F6F6F6",
-                          padding: "8px",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "2px",
-                        }}
-                      >
-                        <span style={{ fontSize: "11px", fontWeight: "700", color: "#545454" }}>
-                          10:30 · this booking
+                      {v.hasBooking ? (
+                        <span
+                          style={{
+                            borderRadius: "10px",
+                            background: "#F6F6F6",
+                            padding: "8px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "2px",
+                          }}
+                        >
+                          <span style={{ fontSize: "11px", fontWeight: "700", color: "#545454" }}>{v.bookingTime}</span>
+                          <span style={{ fontSize: "12px", fontWeight: "700" }}>{v.bookingCard}</span>
                         </span>
-                        <span style={{ fontSize: "12px", fontWeight: "700" }}>Knee exercises</span>
-                      </span>
+                      ) : null}
                       <span
                         style={{
                           borderRadius: "10px",
@@ -368,7 +410,7 @@ export default function CarePlanScreen() {
                         }}
                       >
                         <span style={{ fontSize: "11px", fontWeight: "700", color: "#545454" }}>Every visit</span>
-                        <span style={{ fontSize: "12px", fontWeight: "600" }}>Walk · tea · medicine · lunch</span>
+                        <span style={{ fontSize: "12px", fontWeight: "600" }}>{v.routineShort}</span>
                       </span>
                     </span>
                     <span
@@ -429,6 +471,7 @@ export default function CarePlanScreen() {
                 <span style={{ fontSize: "16px", fontWeight: "800" }}>{v.selTitle}</span>
                 <Link
                   href="/add-task"
+                  onClick={v.addForDay}
                   style={{
                     height: "32px",
                     padding: "0 14px",
@@ -529,6 +572,7 @@ export default function CarePlanScreen() {
                 <>
                   <Link
                     href="/add-task"
+                    onClick={v.addForDay}
                     style={{
                       display: "block",
                       padding: "12px 16px",
@@ -574,21 +618,18 @@ export default function CarePlanScreen() {
                 </svg>
                 Whole booking
               </div>
-              <div style={{ display: "flex", gap: "10px", padding: "10px 16px" }}>
-                <span style={{ width: "40px", fontSize: "12px", fontWeight: "700" }}>10:30</span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700" }}>Knee exercises from physio</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Until 7 Nov · sheet on the fridge</span>
-                </span>
-              </div>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <div style={{ display: "flex", gap: "10px", padding: "10px 16px" }}>
-                <span style={{ width: "40px", fontSize: "12px", fontWeight: "700" }}>Any</span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700" }}>Check knee bandage is dry</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Call Dilani if wet or red</span>
-                </span>
-              </div>
+              {v.booking.map((t: any) => (
+                <Fragment key={t.id}>
+                  {t.sep ? <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div> : null}
+                  <div style={{ display: "flex", gap: "10px", padding: "10px 16px" }}>
+                    <span style={{ width: "40px", fontSize: "12px", fontWeight: "700" }}>{t.time}</span>
+                    <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: "700" }}>{t.title}</span>
+                      <span style={{ fontSize: "12px", color: "#545454" }}>{t.note}</span>
+                    </span>
+                  </div>
+                </Fragment>
+              ))}
               <div
                 style={{
                   padding: "8px 16px",
@@ -626,9 +667,7 @@ export default function CarePlanScreen() {
                 href="/routine"
                 style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 16px" }}
               >
-                <span style={{ flex: "1", fontSize: "14px", fontWeight: "600" }}>
-                  Walk 9:00 · tea 9:30 · medicine 10:00 · lunch 11:30
-                </span>
+                <span style={{ flex: "1", fontSize: "14px", fontWeight: "600" }}>{v.routineLine}</span>
                 <svg
                   width="16"
                   height="16"

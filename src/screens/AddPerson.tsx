@@ -4,11 +4,21 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/Toaster";
+import { mutate, newId } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { rel: 1, same: true, needs: ["Walking support", "Hard of hearing"] };
+    this.state = {
+      rel: 1,
+      same: true,
+      needs: ["Walking support", "Hard of hearing"],
+      call: "Appachchi",
+      name: "Lionel Fernando",
+      age: "82",
+    };
   }
   renderVals() {
     const pick1 = (key, labels) =>
@@ -42,16 +52,43 @@ class Logic extends DCLogic {
           flip: () => this.setState({ [key]: on ? this.state[key].filter((x) => x !== l) : [...this.state[key], l] }),
         };
       });
+    const st = this.state;
+    const { router } = this.props;
+    const field = (k) => ({ value: st[k], onChange: (e) => this.setState({ [k]: e.target.value }) });
+    const call = st.call.trim() || "them";
     return {
       rels: pick1("rel", ["Mother", "Father", "Grandparent", "Other"]),
       same: tg("same"),
       needs: chips("needs", ["Walking support", "Memory support", "Hard of hearing", "Diabetic meals", "Fall risk"]),
+      call: field("call"),
+      name: field("name"),
+      age: field("age"),
+      cta: `Add ${call}`,
+      add: (e) => {
+        e.preventDefault();
+        if (!st.call.trim() || !st.name.trim()) return toast("Add what you call them and their full name");
+        const id = newId("person");
+        mutate((d) => {
+          d.people.push({
+            id,
+            call: st.call.trim(),
+            name: st.name.trim(),
+            age: Number(st.age) || 0,
+            note: "No visits yet · profile 80% done",
+            avatar: st.call.trim().toLowerCase() === "appachchi" ? "/images/appachchi.png" : "/images/person.svg",
+          });
+          d.ui.lastPerson = id;
+          d.ui.lastPersonSame = st.same;
+        });
+        router.push("/person-added");
+      },
     };
   }
 }
 
 export default function AddPersonScreen() {
-  const v = useLogic(Logic);
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { router } });
   return (
     <div
       style={{
@@ -154,7 +191,7 @@ export default function AddPersonScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>What you call him</span>
               <input
-                defaultValue="Appachchi"
+                {...v.call}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -172,7 +209,7 @@ export default function AddPersonScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>Full name</span>
               <input
-                defaultValue="Lionel Fernando"
+                {...v.name}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -190,7 +227,8 @@ export default function AddPersonScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>Age</span>
               <input
-                defaultValue="82"
+                inputMode="numeric"
+                {...v.age}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -315,6 +353,7 @@ export default function AddPersonScreen() {
             </Link>
             <Link
               href="/person-added"
+              onClick={v.add}
               style={{
                 height: "44px",
                 padding: "0 22px",
@@ -331,7 +370,7 @@ export default function AddPersonScreen() {
                 whiteSpace: "nowrap",
               }}
             >
-              Add Appachchi
+              {v.cta}
             </Link>
           </div>
         </div>

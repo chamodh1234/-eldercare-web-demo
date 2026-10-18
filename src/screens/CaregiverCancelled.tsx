@@ -4,6 +4,15 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { reassignVisit, selectVisit } from "@/lib/actions";
+import { lkr } from "@/lib/format";
+import { caregiver } from "@/lib/mock/caregivers";
+
+const VISIT = "v-1017";
+const PICKS = [
+  { id: "shanthi", meta: "Cared for Amma 3 times · 4.8 ★", save: "You save LKR 660" },
+  { id: "mala", meta: "2.4 km · Sinhala, Tamil · 4.9 ★", save: "Same price" },
+];
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -11,32 +20,27 @@ class Logic extends DCLogic {
     this.state = { p: 0 };
   }
   renderVals() {
-    const P = [
-      {
-        av: "/images/shanthi.png",
-        name: "Shanthi Rajapaksha",
-        meta: "Cared for Amma 3 times · 4.8 ★",
-        rate: "LKR 1,000/hr",
-        save: "You save LKR 660",
-      },
-      {
-        av: "/images/mala.png",
-        name: "Mala Wickrama",
-        meta: "2.4 km · Sinhala, Tamil · 4.9 ★",
-        rate: "LKR 1,200/hr",
-        save: "Same price",
-      },
-    ];
-    const picks = P.map((p, i) => {
+    const picks = PICKS.map((p, i) => {
+      const cg = caregiver(p.id);
       const on = this.state.p === i;
       return {
-        ...p,
+        av: cg.avatar,
+        name: cg.name,
+        meta: p.meta,
+        rate: `${lkr(cg.rate)}/hr`,
+        save: p.save,
         pressed: on ? "true" : "false",
         border: on ? "2px solid #000000" : "1px solid #E2E2E2",
         pick: () => this.setState({ p: i }),
       };
     });
-    return { picks, cta: "Book " + P[this.state.p].name.split(" ")[0] + " instead" };
+    const chosen = PICKS[this.state.p];
+    return {
+      picks,
+      cta: "Book " + caregiver(chosen.id).first + " instead",
+      book: () => reassignVisit(VISIT, chosen.id),
+      cancel: () => selectVisit(VISIT),
+    };
   }
 }
 
@@ -218,6 +222,7 @@ export default function CaregiverCancelledScreen() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <Link
                 href="/confirmed"
+                onClick={v.book}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -258,6 +263,7 @@ export default function CaregiverCancelledScreen() {
               </Link>
               <Link
                 href="/cancel-booking"
+                onClick={v.cancel}
                 style={{
                   height: "40px",
                   padding: "0 18px",

@@ -1,7 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { extensionView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 export default function VisitExtendedScreen() {
+  const demo = useDemo();
+  const x = extensionView(demo);
   return (
     <div
       style={{
@@ -105,7 +111,7 @@ export default function VisitExtendedScreen() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                Nirmala stays until 1:00 PM
+                {`Nirmala stays until ${x.visit.end}`}
               </h1>
               <span style={{ fontSize: "15px", lineHeight: "1.5", color: "#333333" }}>
                 {"She's been told. Amma won't be alone for the doctor's call."}
@@ -123,8 +129,10 @@ export default function VisitExtendedScreen() {
               >
                 <span style={{ color: "#545454" }}>Visit</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  9:02 AM – 1:00 PM
-                  <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>4 hrs</span>
+                  {`9:02 AM – ${x.visit.end}`}
+                  <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
+                    {`${x.hours} hrs`}
+                  </span>
                 </span>
               </div>
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
@@ -138,7 +146,7 @@ export default function VisitExtendedScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Was</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 3,960</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{x.was}</span>
               </div>
               <div style={{ height: "1px", background: "#E2E2E2" }}></div>
               <div
@@ -153,9 +161,11 @@ export default function VisitExtendedScreen() {
               >
                 <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                   <span style={{ fontSize: "14px", fontWeight: "700", color: "#1A4FB5" }}>Now held</span>
-                  <span style={{ fontSize: "12px", color: "#333333" }}>+ LKR 1,320 for the extra hour</span>
+                  <span
+                    style={{ fontSize: "12px", color: "#333333" }}
+                  >{`+ ${x.extra} for the extra ${x.mins === 60 ? "hour" : "time"}`}</span>
                 </span>
-                <span style={{ fontSize: "18px", fontWeight: "800", whiteSpace: "nowrap" }}>LKR 5,280</span>
+                <span style={{ fontSize: "18px", fontWeight: "800", whiteSpace: "nowrap" }}>{x.now}</span>
               </div>
             </div>
             <div
@@ -317,9 +327,9 @@ export default function VisitExtendedScreen() {
               >
                 <span style={{ color: "#545454" }}>Ends</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  1:00 PM
+                  {x.visit.end}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                    Extended by 1 hr
+                    {`Extended by ${x.mins === 60 ? "1 hr" : x.dur}`}
                   </span>
                 </span>
               </div>

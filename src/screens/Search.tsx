@@ -4,13 +4,30 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { RangeSlider } from "@/components/RangeSlider";
+import { selectCaregiver } from "@/lib/actions";
+import { lkr } from "@/lib/format";
+import { searchable } from "@/lib/mock/caregivers";
+import { useDemo } from "@/lib/store";
+
+const SORTS = ["Best match", "Lowest price", "Highest rated", "Nearest"];
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { helps: ["Companionship"], langs: ["Sinhala"], verified: true, saved: false };
+    this.state = {
+      helps: ["Companionship"],
+      langs: [],
+      verified: true,
+      saved: false,
+      q: "",
+      sort: 0,
+      low: 800,
+      high: 1500,
+    };
   }
   renderVals() {
+    const { demo } = this.props;
     const chip = (key, labels) =>
       labels.map((l) => {
         const on = this.state[key].includes(l);
@@ -31,63 +48,60 @@ class Logic extends DCLogic {
         flip: () => this.setState({ [k]: !on }),
       };
     };
-    const all = [
-      {
-        av: "/images/nirmala.png",
-        name: "Nirmala Perera",
-        rating: "4.9",
-        reviews: 86,
-        meta: "8 yrs · Sinhala, English · 1.4 km",
-        blurb: "Patient and calm. Dementia and mobility support.",
-        rate: "1,200",
-        saved: true,
-      },
-      {
-        av: "/images/mala.png",
-        name: "Mala Wickrama",
-        rating: "4.9",
-        reviews: 52,
-        meta: "6 yrs · Sinhala, Tamil · 2.4 km",
-        blurb: "Former hospital aide. Good with post-surgery recovery.",
-        rate: "1,200",
-        saved: true,
-      },
-      {
-        av: "/images/shanthi.png",
-        name: "Shanthi Rajapaksha",
-        rating: "4.8",
-        reviews: 31,
-        meta: "5 yrs · Sinhala · 3.1 km",
-        blurb: "Cooks traditional meals. Calm with early memory loss.",
-        rate: "1,000",
-        saved: true,
-      },
-      {
-        av: "/images/priya.png",
-        name: "Priya Senanayake",
-        rating: "4.6",
-        reviews: 12,
-        meta: "3 yrs · English, Tamil · 3.8 km",
-        blurb: "Companion and errands. Drives to clinic visits.",
-        rate: "950",
-        saved: false,
-      },
-    ];
-    const list = this.state.saved ? all.filter((p) => p.saved) : all;
-    const people = list.map((p, i) => ({ ...p, sep: i === 0 ? "none" : "1px solid #E2E2E2" }));
+    const { helps, langs, verified, saved, low, high, sort } = this.state;
+    const q = this.state.q.trim().toLowerCase();
+    const blocked = demo.blocked.map((b) => b.id);
+    let list = searchable.filter(
+      (c) =>
+        !blocked.includes(c.id) &&
+        helps.every((h) => c.helps.includes(h)) &&
+        (langs.length === 0 || langs.some((l) => c.languages.includes(l))) &&
+        (!verified || c.verified) &&
+        (!saved || demo.saved.includes(c.id) || c.visitsWithAmma > 0) &&
+        c.rate >= low &&
+        c.rate <= high &&
+        (!q || [c.name, c.blurb, ...c.skills, ...c.languages].some((x) => x.toLowerCase().includes(q))),
+    );
+    const by = [() => 0, (a, b) => a.rate - b.rate, (a, b) => b.rating - a.rating, (a, b) => a.km - b.km][sort];
+    list = [...list].sort(by);
+    const people = list.map((c, i) => ({
+      id: c.id,
+      av: c.avatar,
+      name: c.name,
+      rating: c.rating.toFixed(1),
+      reviews: c.reviews,
+      meta: `${c.years} yrs · ${c.languages.join(", ")} · ${c.km} km`,
+      blurb: c.blurb,
+      rate: c.rate.toLocaleString("en-US"),
+      sep: i === 0 ? "none" : "1px solid #E2E2E2",
+      open: () => selectCaregiver(c.id),
+    }));
+    const narrowed = people.length < searchable.length || q;
     return {
       helps: chip("helps", ["Companionship", "Personal care", "Memory care", "Errands", "Overnight"]),
       langs: chip("langs", ["Sinhala", "Tamil", "English"]),
       verified: tg("verified"),
       saved: tg("saved"),
       people,
-      count: people.length === 4 ? 48 : people.length,
+      none: people.length === 0,
+      count: narrowed ? people.length : 48,
+      q: this.state.q,
+      setQ: (e) => this.setState({ q: e.target.value }),
+      low,
+      high,
+      lowLabel: lkr(low),
+      highLabel: lkr(high),
+      setPrice: (a, b) => this.setState({ low: a, high: b }),
+      sortLabel: "Sort: " + SORTS[sort],
+      nextSort: () => this.setState({ sort: (sort + 1) % SORTS.length }),
+      clear: () => this.setState({ helps: [], langs: [], verified: false, saved: false, q: "", low: 800, high: 1500 }),
     };
   }
 }
 
 export default function SearchScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo }, persist: "search" });
   return (
     <div
       style={{
@@ -144,6 +158,8 @@ export default function SearchScreen() {
             <input
               aria-label="Search caregivers"
               placeholder="Search by name, skill or language, e.g. dementia"
+              value={v.q}
+              onChange={v.setQ}
               style={{
                 flex: "1",
                 minWidth: "0",
@@ -298,48 +314,18 @@ export default function SearchScreen() {
                 Price per hour
               </span>{" "}
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", fontWeight: "700" }}>
-                <span>LKR 800</span>
-                <span>LKR 1,500</span>
+                <span>{v.lowLabel}</span>
+                <span>{v.highLabel}</span>
               </div>{" "}
-              <div style={{ height: "6px", borderRadius: "3px", background: "#E2E2E2", position: "relative" }}>
-                <span
-                  style={{
-                    position: "absolute",
-                    left: "10%",
-                    right: "25%",
-                    top: "0",
-                    bottom: "0",
-                    borderRadius: "3px",
-                    background: "#000000",
-                  }}
-                ></span>
-                <span
-                  style={{
-                    position: "absolute",
-                    left: "calc(10% - 10px)",
-                    top: "-7px",
-                    width: "20px",
-                    height: "20px",
-                    borderRadius: "10px",
-                    background: "#FFFFFF",
-                    border: "2px solid #000000",
-                    boxSizing: "border-box",
-                  }}
-                ></span>
-                <span
-                  style={{
-                    position: "absolute",
-                    right: "calc(25% - 10px)",
-                    top: "-7px",
-                    width: "20px",
-                    height: "20px",
-                    borderRadius: "10px",
-                    background: "#FFFFFF",
-                    border: "2px solid #000000",
-                    boxSizing: "border-box",
-                  }}
-                ></span>
-              </div>
+              <RangeSlider
+                min={700}
+                max={1800}
+                step={50}
+                low={v.low}
+                high={v.high}
+                onChange={v.setPrice}
+                label="price per hour"
+              />
             </div>{" "}
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "12px", overflow: "hidden" }}>
               <button
@@ -432,7 +418,9 @@ export default function SearchScreen() {
                 {v.count}
                 {" caregivers free on Sat"}
               </h1>{" "}
-              <span
+              <button
+                type="button"
+                onClick={v.nextSort}
                 style={{
                   height: "32px",
                   padding: "0 14px",
@@ -443,9 +431,12 @@ export default function SearchScreen() {
                   gap: "6px",
                   fontSize: "13px",
                   fontWeight: "600",
+                  border: "none",
+                  color: "#000000",
+                  fontFamily: "var(--font-figtree), sans-serif",
                 }}
               >
-                Sort: Best match
+                {v.sortLabel}
                 <svg
                   width="14"
                   height="14"
@@ -458,7 +449,7 @@ export default function SearchScreen() {
                 >
                   <path d="M6 9l6 6 6-6"></path>
                 </svg>
-              </span>
+              </button>
             </div>{" "}
             <div
               style={{
@@ -469,10 +460,41 @@ export default function SearchScreen() {
                 flexDirection: "column",
               }}
             >
+              {v.none ? (
+                <div
+                  style={{
+                    padding: "28px 16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "10px",
+                    textAlign: "center",
+                  }}
+                >
+                  <span style={{ fontSize: "15px", fontWeight: "800" }}>No caregivers match these filters</span>
+                  <span style={{ fontSize: "13px", color: "#545454" }}>Try fewer filters or a wider price range.</span>
+                  <button
+                    type="button"
+                    onClick={v.clear}
+                    style={{
+                      height: "36px",
+                      padding: "0 16px",
+                      borderRadius: "18px",
+                      border: "none",
+                      background: "#000000",
+                      color: "#FFFFFF",
+                      font: "700 13px var(--font-figtree), sans-serif",
+                    }}
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              ) : null}
               {v.people.map((p: any, i3: number) => (
                 <Fragment key={i3}>
                   <Link
                     href="/profile"
+                    onClick={p.open}
                     style={{
                       display: "flex",
                       flexWrap: "wrap",

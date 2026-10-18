@@ -4,6 +4,9 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { openChat, selectCaregiver } from "@/lib/actions";
+import { mutate, useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -14,6 +17,7 @@ class Logic extends DCLogic {
     const A = [
       {
         av: "/images/nirmala.png",
+        id: "nirmala",
         name: "Nirmala Perera",
         meta: "4.9 ★ · 8 yrs · 1.4 km",
         rate: "1,200",
@@ -23,6 +27,7 @@ class Logic extends DCLogic {
       },
       {
         av: "/images/mala.png",
+        id: "mala",
         name: "Mala Wickrama",
         meta: "4.9 ★ · 6 yrs · 2.4 km",
         rate: "1,200",
@@ -32,6 +37,7 @@ class Logic extends DCLogic {
       },
       {
         av: "/images/priya.png",
+        id: "priya",
         name: "Priya Senanayake",
         meta: "4.6 ★ · 3 yrs · 3.8 km",
         rate: "1,100",
@@ -41,6 +47,7 @@ class Logic extends DCLogic {
       },
       {
         av: "/images/shanthi.png",
+        id: "shanthi",
         name: "Shanthi Rajapaksha",
         meta: "4.8 ★ · 5 yrs · 3.1 km",
         rate: "1,000",
@@ -49,8 +56,11 @@ class Logic extends DCLogic {
         badge: "3 days only",
       },
     ];
-    const list = A.map((a, i) => {
-      const on = this.state.s === i;
+    const { demo } = this.props;
+    const shown = A.filter((a) => !demo.rejected.includes(a.id));
+    const si = Math.min(this.state.s, Math.max(0, shown.length - 1));
+    const list = shown.map((a, i) => {
+      const on = si === i;
       return {
         ...a,
         pressed: on ? "true" : "false",
@@ -60,12 +70,43 @@ class Logic extends DCLogic {
         pick: () => this.setState({ s: i }),
       };
     });
-    return { list, sel: A[this.state.s] };
+    const sel = shown[si] ?? A[0];
+    const job =
+      demo.jobs.find((j) => j.id === demo.ui.selectedJob) ?? demo.jobs.find((j) => j.status === "Live") ?? demo.jobs[0];
+    const pick = () =>
+      mutate((d) => {
+        d.ui.applicant = sel.id;
+      });
+    return {
+      list,
+      sel,
+      none: shown.length === 0,
+      count: `${shown.length} applicant${shown.length === 1 ? "" : "s"}`,
+      title: job.title,
+      pick,
+      notFit: (e) => {
+        e.preventDefault();
+        mutate((d) => {
+          d.rejected.push(sel.id);
+        });
+        toast(`${sel.name.split(" ")[0]} gets a kind "not this time" note`);
+      },
+      close: () => {
+        mutate((d) => {
+          const j = d.jobs.find((x) => x.id === job.id);
+          if (j) Object.assign(j, { status: "Closed", applicants: "—" });
+        });
+        toast("Job closed · applicants have been told");
+      },
+      message: () => openChat(sel.id),
+      profile: () => selectCaregiver(sel.id),
+    };
   }
 }
 
 export default function ApplicantsScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{
@@ -134,7 +175,7 @@ export default function ApplicantsScreen() {
             <h1
               style={{ margin: "0", fontSize: "30px", lineHeight: "1.1", fontWeight: "800", letterSpacing: "-0.025em" }}
             >
-              Morning companion for Amma
+              {v.title}
             </h1>
             <span style={{ fontSize: "15px", color: "#545454" }}>
               Mon–Sat · 9:00 – 12:00 · from Mon 12 Oct · LKR 1,200/hr
@@ -180,6 +221,7 @@ export default function ApplicantsScreen() {
             </Link>
             <Link
               href="/my-jobs"
+              onClick={v.close}
               style={{
                 height: "40px",
                 padding: "0 18px",
@@ -213,7 +255,7 @@ export default function ApplicantsScreen() {
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>4 applicants</h2>
+              <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>{v.count}</h2>
               <span style={{ fontSize: "12px", color: "#545454" }}>Sorted by best match</span>
             </div>
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
@@ -404,6 +446,7 @@ export default function ApplicantsScreen() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <Link
                 href="/hire"
+                onClick={v.pick}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -424,6 +467,7 @@ export default function ApplicantsScreen() {
               </Link>
               <Link
                 href="/meet-options"
+                onClick={v.pick}
                 style={{
                   height: "40px",
                   padding: "0 18px",
@@ -458,6 +502,7 @@ export default function ApplicantsScreen() {
               </Link>
               <Link
                 href="/messages"
+                onClick={v.message}
                 style={{
                   height: "40px",
                   padding: "0 18px",
@@ -478,6 +523,7 @@ export default function ApplicantsScreen() {
               </Link>
               <Link
                 href="/profile"
+                onClick={v.profile}
                 style={{
                   height: "40px",
                   padding: "0 18px",
@@ -498,6 +544,7 @@ export default function ApplicantsScreen() {
               </Link>
               <Link
                 href="/applicants"
+                onClick={v.notFit}
                 style={{
                   height: "40px",
                   padding: "0 18px",

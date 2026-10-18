@@ -4,13 +4,21 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/Toaster";
+import { addDays, dayLabel, dayNum, dow, TODAY } from "@/lib/format";
+import type { TaskKind } from "@/lib/mock/seed";
+import { mutate, newId } from "@/lib/store";
+
+const BLANK = { title: "", time: "", note: "" };
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { w: 2, d: 0, notify: true };
+    this.state = { w: 2, date: TODAY, notify: true, editId: null, ...BLANK };
   }
   renderVals() {
+    const { router } = this.props;
     const seg = (key, labels) =>
       labels.map((l, i) => {
         const on = this.state[key] === i;
@@ -32,39 +40,72 @@ class Logic extends DCLogic {
         flip: () => this.setState({ [k]: !on }),
       };
     };
-    const D = [
-      ["Thu", 15],
-      ["Fri", 16],
-      ["Sat", 17],
-      ["Mon", 19],
-      ["Tue", 20],
-      ["Wed", 21],
-    ];
-    const days = D.map((d, i) => {
-      const on = this.state.d === i;
+    // The next visit days: today, then the booking's Mon–Sat days.
+    const D = [0, 1, 2, 4, 5, 6].map((n) => addDays(TODAY, n));
+    if (!D.includes(this.state.date)) D.push(this.state.date);
+    const days = D.map((iso, i) => {
+      const on = this.state.date === iso;
       return {
-        dow: i === 0 ? "Today" : d[0],
-        num: d[1],
+        dow: i === 0 ? "Today" : dow(iso),
+        num: dayNum(iso),
         pressed: on ? "true" : "false",
         bg: on ? "#000000" : "#EEEEEE",
         fg: on ? "#FFFFFF" : "#000000",
-        pick: () => this.setState({ d: i }),
+        pick: () => this.setState({ date: iso }),
       };
     });
     const W = ["Every visit", "Whole booking", "One day"];
+    const today = this.state.date === TODAY;
     const hints = [
       "Added to Amma's routine for every caregiver",
       "Every visit with Nirmala until 7 Nov",
-      this.state.d === 0
-        ? "Today only · Nirmala gets a notification now"
-        : "Only on " + D[this.state.d][0] + " " + D[this.state.d][1] + " Oct",
+      today ? "Today only · Nirmala gets a notification now" : "Only on " + dayLabel(this.state.date),
     ];
-    return { when: seg("w", W), days, oneDay: this.state.w === 2, hint: hints[this.state.w], notify: tg("notify") };
+    const field = (k) => ({ value: this.state[k], onChange: (e) => this.setState({ [k]: e.target.value }) });
+    return {
+      when: seg("w", W),
+      days,
+      oneDay: this.state.w === 2,
+      hint: hints[this.state.w],
+      notify: tg("notify"),
+      title: field("title"),
+      time: field("time"),
+      note: field("note"),
+      cancel: () => this.setState({ ...BLANK, w: 2, date: TODAY, editId: null }),
+      add: (e) => {
+        e.preventDefault();
+        const title = this.state.title.trim();
+        if (!title) return toast("Write what Nirmala should do first");
+        const kind = (["routine", "booking", "day"] as TaskKind[])[this.state.w];
+        const time = this.state.time.trim() || "Any";
+        mutate((d) => {
+          const existing = d.tasks.find((t) => t.id === this.state.editId);
+          if (existing) {
+            Object.assign(existing, { kind, title, time, note: this.state.note.trim() });
+            delete d.ui.addTask;
+            return;
+          }
+          d.tasks.push({
+            id: newId("t"),
+            kind,
+            title,
+            note: this.state.note.trim() || (kind === "day" ? `From ${d.account.first}` : ""),
+            time,
+            ...(kind === "day" ? { date: this.state.date } : {}),
+          });
+          delete d.ui.addTask;
+        });
+        const done = this.state.editId ? "Task updated" : "Task added";
+        toast(this.state.notify ? `${done} · Nirmala has been told` : done);
+        router.push(this.state.editId ? "/routine" : "/care-plan");
+      },
+    };
   }
 }
 
 export default function AddTaskScreen() {
-  const v = useLogic(Logic);
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { router }, persist: "addTask" });
   return (
     <div
       style={{
@@ -182,7 +223,8 @@ export default function AddTaskScreen() {
           <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
             <span style={{ fontSize: "13px", fontWeight: "600" }}>Task</span>
             <input
-              defaultValue="Let the electrician in and stay nearby"
+              placeholder="e.g. Let the electrician in and stay nearby"
+              {...v.title}
               style={{
                 height: "44px",
                 border: "1px solid #E2E2E2",
@@ -269,7 +311,8 @@ export default function AddTaskScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>Time</span>
               <input
-                defaultValue="11:00"
+                placeholder="11:00"
+                {...v.time}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -287,7 +330,8 @@ export default function AddTaskScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>Note for Nirmala · optional</span>
               <input
-                defaultValue="His name is Saman, he has an ID card"
+                placeholder="e.g. His name is Saman, he has an ID card"
+                {...v.note}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -344,6 +388,7 @@ export default function AddTaskScreen() {
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
             <Link
               href="/care-plan"
+              onClick={v.cancel}
               style={{
                 height: "40px",
                 padding: "0 18px",
@@ -364,6 +409,7 @@ export default function AddTaskScreen() {
             </Link>
             <Link
               href="/care-plan"
+              onClick={v.add}
               style={{
                 height: "44px",
                 padding: "0 22px",

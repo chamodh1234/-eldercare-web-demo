@@ -4,13 +4,18 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { selectCaregiver } from "@/lib/actions";
+import { caregiver, reviewerPhoto } from "@/lib/mock/caregivers";
+import { useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { f: 0 };
+    this.state = { f: 0, more: false };
   }
   renderVals() {
+    const { demo } = this.props;
+    const cg = caregiver(demo.selectedCaregiver);
     const F = ["All", "Memory care", "Mobility", "Meals", "With photos"];
     const fil = F.map((f, i) => {
       const on = this.state.f === i;
@@ -19,15 +24,33 @@ class Logic extends DCLogic {
         pressed: on ? "true" : "false",
         bg: on ? "#000000" : "#EEEEEE",
         fg: on ? "#FFFFFF" : "#000000",
-        flip: () => this.setState({ f: i }),
+        flip: () => this.setState({ f: i, more: false }),
       };
     });
-    return { fil };
+    const tag = F[this.state.f];
+    const matching = cg.reviewList.filter((r) => this.state.f === 0 || (this.state.f !== 4 && r.tag === tag));
+    const shown = this.state.more ? matching : matching.slice(0, 4);
+    return {
+      fil,
+      cg,
+      reviews: shown.map((r) => ({
+        ...r,
+        photo: reviewerPhoto(r.by),
+        meta: `${r.when} · verified visit`,
+        starsText: "★".repeat(r.stars),
+      })),
+      none: shown.length === 0,
+      canMore: matching.length > shown.length,
+      showMore: () => this.setState({ more: true }),
+      rating: cg.rating.toFixed(1),
+      counts: `${cg.reviews} reviews · ${cg.visits} visits`,
+    };
   }
 }
 
 export default function ReviewsScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{
@@ -81,11 +104,11 @@ export default function ReviewsScreen() {
           >
             <path d="M15 18l-6-6 6-6"></path>
           </svg>
-          {"Nirmala's profile"}
+          {`${v.cg.first}'s profile`}
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <img
-            src="/images/nirmala.png"
+            src={v.cg.avatar}
             alt=""
             style={{
               width: "56px",
@@ -100,7 +123,7 @@ export default function ReviewsScreen() {
             <h1
               style={{ margin: "0", fontSize: "30px", lineHeight: "1.1", fontWeight: "800", letterSpacing: "-0.025em" }}
             >
-              Reviews for Nirmala
+              Reviews for {v.cg.first}
             </h1>
             <span style={{ fontSize: "15px", color: "#545454" }}>Only families who booked a visit can review</span>
           </div>
@@ -122,11 +145,11 @@ export default function ReviewsScreen() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <span style={{ fontSize: "48px", fontWeight: "800", letterSpacing: "-0.03em", lineHeight: "1" }}>
-                4.9
+                {v.rating}
               </span>
               <span style={{ display: "flex", flexDirection: "column" }}>
                 <span style={{ fontSize: "14px", fontWeight: "800" }}>★★★★★</span>
-                <span style={{ fontSize: "12px", color: "#545454" }}>86 reviews · 142 visits</span>
+                <span style={{ fontSize: "12px", color: "#545454" }}>{v.counts}</span>
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "13px" }}>
@@ -248,6 +271,7 @@ export default function ReviewsScreen() {
             </div>
             <Link
               href="/book"
+              onClick={() => selectCaregiver(v.cg.id)}
               style={{
                 height: "44px",
                 padding: "0 22px",
@@ -264,7 +288,7 @@ export default function ReviewsScreen() {
                 whiteSpace: "nowrap",
               }}
             >
-              Book Nirmala
+              Book {v.cg.first}
             </Link>
           </aside>
           <section
@@ -302,235 +326,98 @@ export default function ReviewsScreen() {
               </div>
               <span style={{ fontSize: "13px", color: "#545454" }}>Most recent first</span>
             </div>
-            <div
-              style={{
-                border: "1px solid #E2E2E2",
-                borderRadius: "16px",
-                padding: "16px 18px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <img
-                  src="/images/ruwani.png"
-                  alt=""
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    display: "block",
-                    flexShrink: "0",
-                  }}
-                />
-                <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "800" }}>Ruwani S.</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>2 weeks ago · verified visit</span>
-                </span>
-                <span style={{ fontSize: "13px", fontWeight: "800" }}>★★★★★</span>
+            {v.none ? (
+              <div
+                style={{
+                  border: "1px solid #E2E2E2",
+                  borderRadius: "16px",
+                  padding: "24px 18px",
+                  fontSize: "14px",
+                  color: "#545454",
+                }}
+              >
+                No reviews here yet.
               </div>
-              <span style={{ fontSize: "14px", lineHeight: "1.55", color: "#333333" }}>
-                Patient with my father who has dementia. Always on time and sends lovely notes after every visit.
-              </span>
-              <span>
-                <span
-                  style={{
-                    height: "24px",
-                    padding: "0 10px",
-                    borderRadius: "12px",
-                    background: "#EEEEEE",
-                    color: "#333333",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Memory care
+            ) : null}
+            {v.reviews.map((r: any, i: number) => (
+              <div
+                key={i}
+                style={{
+                  border: "1px solid #E2E2E2",
+                  borderRadius: "16px",
+                  padding: "16px 18px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <img
+                    src={r.photo}
+                    alt=""
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      display: "block",
+                      flexShrink: "0",
+                    }}
+                  />
+                  <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
+                    <span style={{ fontSize: "14px", fontWeight: "800" }}>{r.by}</span>
+                    <span style={{ fontSize: "12px", color: "#545454" }}>{r.meta}</span>
+                  </span>
+                  <span style={{ fontSize: "13px", fontWeight: "800" }}>{r.starsText}</span>
+                </div>
+                <span style={{ fontSize: "14px", lineHeight: "1.55", color: "#333333" }}>{r.text}</span>
+                <span>
+                  <span
+                    style={{
+                      height: "24px",
+                      padding: "0 10px",
+                      borderRadius: "12px",
+                      background: "#EEEEEE",
+                      color: "#333333",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {r.tag}
+                  </span>
                 </span>
-              </span>
-            </div>
-            <div
-              style={{
-                border: "1px solid #E2E2E2",
-                borderRadius: "16px",
-                padding: "16px 18px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <img
-                  src="/images/dilani.png"
-                  alt=""
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    display: "block",
-                    flexShrink: "0",
-                  }}
-                />
-                <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "800" }}>Dilani F.</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>3 Oct · verified visit</span>
-                </span>
-                <span style={{ fontSize: "13px", fontWeight: "800" }}>★★★★★</span>
               </div>
-              <span style={{ fontSize: "14px", lineHeight: "1.55", color: "#333333" }}>
-                Very patient with Amma and kept us updated all morning. Ruwan in Melbourne loved the photos.
-              </span>
-              <span>
-                <span
-                  style={{
-                    height: "24px",
-                    padding: "0 10px",
-                    borderRadius: "12px",
-                    background: "#EEEEEE",
-                    color: "#333333",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Companionship
-                </span>
-              </span>
-            </div>
-            <div
-              style={{
-                border: "1px solid #E2E2E2",
-                borderRadius: "16px",
-                padding: "16px 18px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <img
-                  src="/images/rohini.png"
-                  alt=""
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    display: "block",
-                    flexShrink: "0",
-                  }}
-                />
-                <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "800" }}>Rohini P.</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Sep · verified visit</span>
-                </span>
-                <span style={{ fontSize: "13px", fontWeight: "800" }}>★★★★★</span>
-              </div>
-              <span style={{ fontSize: "14px", lineHeight: "1.55", color: "#333333" }}>
-                Kind and careful. Cooked exactly how Thaththa likes it and left the kitchen spotless.
-              </span>
-              <span>
-                <span
-                  style={{
-                    height: "24px",
-                    padding: "0 10px",
-                    borderRadius: "12px",
-                    background: "#EEEEEE",
-                    color: "#333333",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Meals
-                </span>
-              </span>
-            </div>
-            <div
-              style={{
-                border: "1px solid #E2E2E2",
-                borderRadius: "16px",
-                padding: "16px 18px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <img
-                  src="/images/amma.png"
-                  alt=""
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    display: "block",
-                    flexShrink: "0",
-                  }}
-                />
-                <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "800" }}>Kumari J.</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Aug · verified visit</span>
-                </span>
-                <span style={{ fontSize: "13px", fontWeight: "800" }}>★★★★★</span>
-              </div>
-              <span style={{ fontSize: "14px", lineHeight: "1.55", color: "#333333" }}>
-                Helped my mother walk again after her fall. Gentle but firm with the exercises.
-              </span>
-              <span>
-                <span
-                  style={{
-                    height: "24px",
-                    padding: "0 10px",
-                    borderRadius: "12px",
-                    background: "#EEEEEE",
-                    color: "#333333",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Mobility
-                </span>
-              </span>
-            </div>
-            <Link
-              href="/reviews"
-              style={{
-                height: "40px",
-                padding: "0 18px",
-                borderRadius: "20px",
-                background: "#EEEEEE",
-                color: "#000000",
-                fontSize: "14px",
-                fontWeight: "600",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                boxSizing: "border-box",
-                whiteSpace: "nowrap",
-                alignSelf: "flex-start",
-              }}
-            >
-              Show more reviews
-            </Link>
+            ))}
+            {v.canMore ? (
+              <button
+                type="button"
+                onClick={v.showMore}
+                style={{
+                  border: "none",
+                  fontFamily: "var(--font-figtree), sans-serif",
+                  height: "40px",
+                  padding: "0 18px",
+                  borderRadius: "20px",
+                  background: "#EEEEEE",
+                  color: "#000000",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  boxSizing: "border-box",
+                  whiteSpace: "nowrap",
+                  alignSelf: "flex-start",
+                }}
+              >
+                Show more reviews
+              </button>
+            ) : null}
           </section>
         </div>
       </main>

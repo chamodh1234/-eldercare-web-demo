@@ -1,6 +1,25 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { CodeInput } from "@/components/CodeInput";
+import { toast } from "@/components/Toaster";
+import { logIn } from "@/lib/actions";
+import { useDemo } from "@/lib/store";
 
 export default function OtpScreen() {
+  const demo = useDemo();
+  const router = useRouter();
+  const [code, setCode] = useState("7159");
+  const phone = "+94 " + (demo.ui.loginPhone ?? "77 512 4120");
+  const verify = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (code.length < 6) return toast("Enter all 6 digits");
+    logIn();
+    toast(`Welcome back, ${demo.account.first}`);
+    router.push("/visits");
+  };
   return (
     <div
       style={{
@@ -205,100 +224,16 @@ export default function OtpScreen() {
                 Enter the code
               </h1>
               <span style={{ fontSize: "15px", color: "#545454" }}>
-                {"Sent to +94 77 512 4120 · "}
+                {`Sent to ${phone} · `}
                 <Link href="/login" style={{ color: "#000000", fontWeight: "700", textDecoration: "underline" }}>
                   change
                 </Link>
               </span>
             </div>
-            <div
-              role="group"
-              aria-label="6-digit code"
-              style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: "8px" }}
-            >
-              <span
-                style={{
-                  height: "56px",
-                  borderRadius: "12px",
-                  border: "1px solid #E2E2E2",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  fontWeight: "800",
-                }}
-              >
-                7
-              </span>
-              <span
-                style={{
-                  height: "56px",
-                  borderRadius: "12px",
-                  border: "1px solid #E2E2E2",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  fontWeight: "800",
-                }}
-              >
-                1
-              </span>
-              <span
-                style={{
-                  height: "56px",
-                  borderRadius: "12px",
-                  border: "1px solid #E2E2E2",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  fontWeight: "800",
-                }}
-              >
-                5
-              </span>
-              <span
-                style={{
-                  height: "56px",
-                  borderRadius: "12px",
-                  border: "1px solid #E2E2E2",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  fontWeight: "800",
-                }}
-              >
-                9
-              </span>
-              <span
-                style={{
-                  height: "56px",
-                  borderRadius: "12px",
-                  border: "2px solid #000000",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  fontWeight: "800",
-                }}
-              ></span>
-              <span
-                style={{
-                  height: "56px",
-                  borderRadius: "12px",
-                  border: "1px solid #E2E2E2",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  fontWeight: "800",
-                }}
-              ></span>
-            </div>
+            <CodeInput value={code} onChange={setCode} label="6-digit code" />
             <Link
               href="/visits"
+              onClick={verify}
               style={{
                 height: "44px",
                 padding: "0 22px",
@@ -320,7 +255,14 @@ export default function OtpScreen() {
             </Link>
             <span style={{ fontSize: "13px", color: "#545454" }}>
               {"Didn't get it? Resend in 0:24 · or "}
-              <Link href="/otp" style={{ color: "#000000", fontWeight: "700", textDecoration: "underline" }}>
+              <Link
+                href="/otp"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toast("Code sent on WhatsApp");
+                }}
+                style={{ color: "#000000", fontWeight: "700", textDecoration: "underline" }}
+              >
                 get a WhatsApp code
               </Link>
             </span>

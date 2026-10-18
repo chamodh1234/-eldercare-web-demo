@@ -1,7 +1,39 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "@/components/Toaster";
+import { articles } from "@/lib/mock/help";
+import { mutate } from "@/lib/store";
+
+function openArticle(id: string) {
+  mutate((d) => {
+    d.ui.article = id;
+  });
+}
 
 export default function HelpCentreScreen() {
+  const router = useRouter();
+  const [q, setQ] = useState("");
+  const needle = q.trim().toLowerCase();
+  const shows = (label: string) => {
+    if (!needle) return true;
+    const a = articles.find((x) => x.title === label || x.topic === label);
+    return [label, a?.intro ?? "", ...(a?.sections.map((x) => x.p) ?? [])].some((t) =>
+      t.toLowerCase().includes(needle),
+    );
+  };
+  const search = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter" || !needle) return;
+    const hit = articles.find((a) =>
+      [a.title, a.topic, a.intro, ...a.sections.map((x) => x.p)].some((t) => t.toLowerCase().includes(needle)),
+    );
+    if (!hit) return toast("No articles match · try Chat with us");
+    openArticle(hit.id);
+    router.push("/help-article");
+  };
   return (
     <div
       style={{
@@ -62,6 +94,9 @@ export default function HelpCentreScreen() {
             <input
               aria-label="Search help"
               placeholder="Search, e.g. refund, visit code, care circle"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={search}
               style={{
                 flex: "1",
                 minWidth: "0",
@@ -132,387 +167,420 @@ export default function HelpCentreScreen() {
         </Link>
         <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>Browse topics</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "12px" }}>
-          <Link
-            href="/help-article"
-            style={{
-              border: "1px solid #E2E2E2",
-              borderRadius: "16px",
-              padding: "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-            }}
-          >
-            <span
+          {shows("Booking & visits") ? (
+            <Link
+              href="/help-article"
+              onClick={() => openArticle("cancel-move")}
               style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "18px",
-                background: "#EEEEEE",
+                border: "1px solid #E2E2E2",
+                borderRadius: "16px",
+                padding: "16px",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                flexDirection: "column",
+                gap: "10px",
               }}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+              <span
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "18px",
+                  background: "#EEEEEE",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <rect x="4" y="5" width="16" height="16" rx="2"></rect>
-                <path d="M4 10h16M9 3v4M15 3v4"></path>
-              </svg>
-            </span>
-            <span style={{ fontSize: "15px", fontWeight: "800" }}>{"Booking & visits"}</span>
-            <span style={{ fontSize: "12px", color: "#545454" }}>12 articles</span>
-          </Link>
-          <Link
-            href="/help-article"
-            style={{
-              border: "1px solid #E2E2E2",
-              borderRadius: "16px",
-              padding: "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-            }}
-          >
-            <span
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="4" y="5" width="16" height="16" rx="2"></rect>
+                  <path d="M4 10h16M9 3v4M15 3v4"></path>
+                </svg>
+              </span>
+              <span style={{ fontSize: "15px", fontWeight: "800" }}>{"Booking & visits"}</span>
+              <span style={{ fontSize: "12px", color: "#545454" }}>12 articles</span>
+            </Link>
+          ) : null}
+          {shows("Payments & refunds") ? (
+            <Link
+              href="/help-article"
+              onClick={() => openArticle("card-charged")}
               style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "18px",
-                background: "#EEEEEE",
+                border: "1px solid #E2E2E2",
+                borderRadius: "16px",
+                padding: "16px",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                flexDirection: "column",
+                gap: "10px",
               }}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+              <span
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "18px",
+                  background: "#EEEEEE",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <rect x="3" y="6" width="18" height="13" rx="2"></rect>
-                <path d="M3 10h18M7 15h3"></path>
-              </svg>
-            </span>
-            <span style={{ fontSize: "15px", fontWeight: "800" }}>{"Payments & refunds"}</span>
-            <span style={{ fontSize: "12px", color: "#545454" }}>9 articles</span>
-          </Link>
-          <Link
-            href="/help-article"
-            style={{
-              border: "1px solid #E2E2E2",
-              borderRadius: "16px",
-              padding: "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-            }}
-          >
-            <span
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="6" width="18" height="13" rx="2"></rect>
+                  <path d="M3 10h18M7 15h3"></path>
+                </svg>
+              </span>
+              <span style={{ fontSize: "15px", fontWeight: "800" }}>{"Payments & refunds"}</span>
+              <span style={{ fontSize: "12px", color: "#545454" }}>9 articles</span>
+            </Link>
+          ) : null}
+          {shows("Safety & trust") ? (
+            <Link
+              href="/help-article"
+              onClick={() => openArticle("checks")}
               style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "18px",
-                background: "#EEEEEE",
+                border: "1px solid #E2E2E2",
+                borderRadius: "16px",
+                padding: "16px",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                flexDirection: "column",
+                gap: "10px",
               }}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+              <span
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "18px",
+                  background: "#EEEEEE",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"></path>
-              </svg>
-            </span>
-            <span style={{ fontSize: "15px", fontWeight: "800" }}>{"Safety & trust"}</span>
-            <span style={{ fontSize: "12px", color: "#545454" }}>7 articles</span>
-          </Link>
-          <Link
-            href="/help-article"
-            style={{
-              border: "1px solid #E2E2E2",
-              borderRadius: "16px",
-              padding: "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-            }}
-          >
-            <span
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"></path>
+                </svg>
+              </span>
+              <span style={{ fontSize: "15px", fontWeight: "800" }}>{"Safety & trust"}</span>
+              <span style={{ fontSize: "12px", color: "#545454" }}>7 articles</span>
+            </Link>
+          ) : null}
+          {shows("Account & family") ? (
+            <Link
+              href="/help-article"
+              onClick={() => openArticle("abroad")}
               style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "18px",
-                background: "#EEEEEE",
+                border: "1px solid #E2E2E2",
+                borderRadius: "16px",
+                padding: "16px",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                flexDirection: "column",
+                gap: "10px",
               }}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+              <span
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "18px",
+                  background: "#EEEEEE",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <circle cx="9" cy="8" r="3.5"></circle>
-                <path d="M2.5 20c1-3.5 3.5-5 6.5-5s5.5 1.5 6.5 5"></path>
-                <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 15c2 .7 3.2 2.3 3.5 5"></path>
-              </svg>
-            </span>
-            <span style={{ fontSize: "15px", fontWeight: "800" }}>{"Account & family"}</span>
-            <span style={{ fontSize: "12px", color: "#545454" }}>8 articles</span>
-          </Link>
-          <Link
-            href="/help-article"
-            style={{
-              border: "1px solid #E2E2E2",
-              borderRadius: "16px",
-              padding: "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-            }}
-          >
-            <span
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="8" r="3.5"></circle>
+                  <path d="M2.5 20c1-3.5 3.5-5 6.5-5s5.5 1.5 6.5 5"></path>
+                  <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 15c2 .7 3.2 2.3 3.5 5"></path>
+                </svg>
+              </span>
+              <span style={{ fontSize: "15px", fontWeight: "800" }}>{"Account & family"}</span>
+              <span style={{ fontSize: "12px", color: "#545454" }}>8 articles</span>
+            </Link>
+          ) : null}
+          {shows("Care plan & tasks") ? (
+            <Link
+              href="/help-article"
+              onClick={() => openArticle("cancel-move")}
               style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "18px",
-                background: "#EEEEEE",
+                border: "1px solid #E2E2E2",
+                borderRadius: "16px",
+                padding: "16px",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                flexDirection: "column",
+                gap: "10px",
               }}
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+              <span
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "18px",
+                  background: "#EEEEEE",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <path d="M4 12a8 8 0 0 1 14-5.3L20 9"></path>
-                <path d="M20 4v5h-5"></path>
-                <path d="M20 12a8 8 0 0 1-14 5.3L4 15"></path>
-                <path d="M4 20v-5h5"></path>
-              </svg>
-            </span>
-            <span style={{ fontSize: "15px", fontWeight: "800" }}>{"Care plan & tasks"}</span>
-            <span style={{ fontSize: "12px", color: "#545454" }}>5 articles</span>
-          </Link>
-          <Link
-            href="/help-article"
-            style={{
-              border: "1px solid #E2E2E2",
-              borderRadius: "16px",
-              padding: "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-            }}
-          >
-            <span
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 12a8 8 0 0 1 14-5.3L20 9"></path>
+                  <path d="M20 4v5h-5"></path>
+                  <path d="M20 12a8 8 0 0 1-14 5.3L4 15"></path>
+                  <path d="M4 20v-5h5"></path>
+                </svg>
+              </span>
+              <span style={{ fontSize: "15px", fontWeight: "800" }}>{"Care plan & tasks"}</span>
+              <span style={{ fontSize: "12px", color: "#545454" }}>5 articles</span>
+            </Link>
+          ) : null}
+          {shows("For caregivers") ? (
+            <Link
+              href="/help-article"
+              onClick={() => openArticle("checks")}
               style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "18px",
-                background: "#EEEEEE",
+                border: "1px solid #E2E2E2",
+                borderRadius: "16px",
+                padding: "16px",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                flexDirection: "column",
+                gap: "10px",
               }}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+              <span
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "18px",
+                  background: "#EEEEEE",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <circle cx="12" cy="8" r="4"></circle>
-                <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path>
-              </svg>
-            </span>
-            <span style={{ fontSize: "15px", fontWeight: "800" }}>For caregivers</span>
-            <span style={{ fontSize: "12px", color: "#545454" }}>14 articles</span>
-          </Link>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="8" r="4"></circle>
+                  <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path>
+                </svg>
+              </span>
+              <span style={{ fontSize: "15px", fontWeight: "800" }}>For caregivers</span>
+              <span style={{ fontSize: "12px", color: "#545454" }}>14 articles</span>
+            </Link>
+          ) : null}
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", alignItems: "flex-start" }}>
           <div style={{ flex: "999 1 460px", minWidth: "0", display: "flex", flexDirection: "column", gap: "10px" }}>
             <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>Popular questions</h2>
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
-              <Link
-                href="/help-article"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "12px 16px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                }}
-              >
-                <span style={{ flex: "1" }}>When is my card charged?</span>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
+              {shows("When is my card charged?") ? (
+                <Link
+                  href="/help-article"
+                  onClick={() => openArticle("card-charged")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                  }}
                 >
-                  <path d="M9 6l6 6-6 6"></path>
-                </svg>
-              </Link>
+                  <span style={{ flex: "1" }}>When is my card charged?</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 6l6 6-6 6"></path>
+                  </svg>
+                </Link>
+              ) : null}
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
-              <Link
-                href="/help-article"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "12px 16px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                }}
-              >
-                <span style={{ flex: "1" }}>How do I cancel or move a visit?</span>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
+              {shows("How do I cancel or move a visit?") ? (
+                <Link
+                  href="/help-article"
+                  onClick={() => openArticle("cancel-move")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                  }}
                 >
-                  <path d="M9 6l6 6-6 6"></path>
-                </svg>
-              </Link>
+                  <span style={{ flex: "1" }}>How do I cancel or move a visit?</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 6l6 6-6 6"></path>
+                  </svg>
+                </Link>
+              ) : null}
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
-              <Link
-                href="/help-article"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "12px 16px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                }}
-              >
-                <span style={{ flex: "1" }}>{"What if the caregiver doesn't come?"}</span>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
+              {shows("What if the caregiver doesn't come?") ? (
+                <Link
+                  href="/help-article"
+                  onClick={() => openArticle("no-show")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                  }}
                 >
-                  <path d="M9 6l6 6-6 6"></path>
-                </svg>
-              </Link>
+                  <span style={{ flex: "1" }}>{"What if the caregiver doesn't come?"}</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 6l6 6-6 6"></path>
+                  </svg>
+                </Link>
+              ) : null}
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
-              <Link
-                href="/help-article"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "12px 16px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                }}
-              >
-                <span style={{ flex: "1" }}>How are caregivers checked?</span>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
+              {shows("How are caregivers checked?") ? (
+                <Link
+                  href="/help-article"
+                  onClick={() => openArticle("checks")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                  }}
                 >
-                  <path d="M9 6l6 6-6 6"></path>
-                </svg>
-              </Link>
+                  <span style={{ flex: "1" }}>How are caregivers checked?</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 6l6 6-6 6"></path>
+                  </svg>
+                </Link>
+              ) : null}
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
-              <Link
-                href="/help-article"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "12px 16px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                }}
-              >
-                <span style={{ flex: "1" }}>Can my family abroad follow visits?</span>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
+              {shows("Can my family abroad follow visits?") ? (
+                <Link
+                  href="/help-article"
+                  onClick={() => openArticle("abroad")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                  }}
                 >
-                  <path d="M9 6l6 6-6 6"></path>
-                </svg>
-              </Link>
+                  <span style={{ flex: "1" }}>Can my family abroad follow visits?</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 6l6 6-6 6"></path>
+                  </svg>
+                </Link>
+              ) : null}
             </div>
           </div>
           <aside

@@ -5,38 +5,45 @@ import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { mutate, useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { v: [0, 1, 3] };
+    this.state = { open: null };
   }
   renderVals() {
-    const D = [
-      ["Prescription · Dr. Gunasekara", "12 Oct · valid till 12 Jan", "Rx"],
-      ["Knee surgery discharge note", "Nawaloka Hospital · 28 Sep", "Note"],
-      ["Blood report", "5 Oct · sugar & cholesterol", "Lab"],
-      ["Physio exercise sheet", "2 Oct · 6 exercises", "Plan"],
-    ];
-    const docs = D.map((d, i) => {
-      const on = this.state.v.includes(i);
+    const { demo } = this.props;
+    const docs = demo.docs.map((d, i) => {
+      const on = d.caregivers;
       return {
-        t: d[0],
-        s: d[1],
-        k: d[2],
+        id: d.id,
+        t: d.title,
+        s: d.sub,
+        k: d.abbr,
         sep: i ? "1px solid #E2E2E2" : "none",
         eye: on ? "Caregiver sees" : "Only family",
         eyeBg: on ? "#EAF0FD" : "#EEEEEE",
         eyeFg: on ? "#1A4FB5" : "#545454",
-        flip: () => this.setState({ v: on ? this.state.v.filter((x) => x !== i) : [...this.state.v, i] }),
+        flip: () =>
+          mutate((s) => {
+            const x = s.docs.find((y) => y.id === d.id);
+            if (x) x.caregivers = !on;
+          }),
+        view: (e) => {
+          e.preventDefault();
+          this.setState({ open: d.id });
+        },
       };
     });
-    return { docs };
+    const open = demo.docs.find((d) => d.id === this.state.open);
+    return { docs, open, close: () => this.setState({ open: null }) };
   }
 }
 
 export default function CareDocsScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{
@@ -240,6 +247,7 @@ export default function CareDocsScreen() {
                     </button>
                     <a
                       href="#"
+                      onClick={d.view}
                       style={{
                         height: "30px",
                         padding: "0 12px",
@@ -260,6 +268,99 @@ export default function CareDocsScreen() {
           </div>
         </div>
       </main>
+      {v.open ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: "0",
+            zIndex: 50,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-start",
+            padding: "64px 16px",
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={v.close}
+            style={{ position: "absolute", inset: "0", background: "rgba(0,0,0,0.45)", border: "none" }}
+          ></button>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={v.open.title}
+            style={{
+              position: "relative",
+              width: "min(560px, 100%)",
+              background: "#FFFFFF",
+              borderRadius: "20px",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.25)",
+              padding: "24px",
+              boxSizing: "border-box",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+              <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "20px", fontWeight: "800", letterSpacing: "-0.02em" }}>{v.open.title}</span>
+                <span style={{ fontSize: "14px", color: "#545454" }}>
+                  {`${v.open.sub} · ${v.open.caregivers ? "caregivers can see it" : "only family"}`}
+                </span>
+              </span>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={v.close}
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "16px",
+                  border: "none",
+                  background: "#EEEEEE",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#000000",
+                  padding: "0",
+                }}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M6 6l12 12M18 6L6 18"></path>
+                </svg>
+              </button>
+            </div>
+            <div
+              style={{
+                height: "320px",
+                borderRadius: "12px",
+                background: "linear-gradient(135deg, #EDE7DA, #CFC6B4)",
+                display: "flex",
+                alignItems: "flex-end",
+                padding: "12px",
+                boxSizing: "border-box",
+                fontSize: "12px",
+                fontWeight: "700",
+                color: "#3A3226",
+              }}
+            >
+              {`${v.open.kind} · page 1 of 1`}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

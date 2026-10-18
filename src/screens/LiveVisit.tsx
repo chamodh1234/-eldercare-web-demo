@@ -1,7 +1,26 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { ChatLog } from "@/components/ChatLog";
+import { LiveTaskList } from "@/components/LiveTaskList";
+import { toast } from "@/components/Toaster";
+import { addDayTask, sendMessage } from "@/lib/actions";
+import { liveTasks, liveVisit, visitById, visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
+import { useComposer } from "@/lib/useComposer";
 
 export default function LiveVisitScreen() {
+  const demo = useDemo();
+  const visit = liveVisit(demo) ?? visitById(demo, "v-1015");
+  const { cg } = visitView(visit);
+  const tasks = liveTasks(demo);
+  const thread = demo.threads.find((t) => t.caregiverId === cg.id);
+  const addTask = useComposer((text) => {
+    addDayTask(text);
+    toast(`Added for today · ${cg.first} gets a notification`);
+  });
+  const chat = useComposer((text) => thread && sendMessage(thread.id, text));
   return (
     <div
       style={{
@@ -72,7 +91,7 @@ export default function LiveVisitScreen() {
             >
               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "14px" }}>
                 <img
-                  src="/images/nirmala.png"
+                  src={cg.avatar}
                   alt=""
                   style={{ width: "48px", height: "48px", borderRadius: "50%", objectFit: "cover" }}
                 />{" "}
@@ -101,14 +120,16 @@ export default function LiveVisitScreen() {
                       letterSpacing: "-0.02em",
                     }}
                   >
-                    Nirmala is with Amma
+                    {cg.first} is with Amma
                   </h1>
                 </span>{" "}
                 <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                   <span style={{ fontSize: "32px", fontWeight: "800", letterSpacing: "-0.03em", lineHeight: "1" }}>
                     2:04
                   </span>
-                  <span style={{ fontSize: "12px", color: "#A6A6A6" }}>of 3 hrs · ends 12:00</span>
+                  <span
+                    style={{ fontSize: "12px", color: "#A6A6A6" }}
+                  >{`of ${visit.hours} hrs · ends ${visit.end}`}</span>
                 </span>{" "}
                 <Link
                   href="/ask-more-time"
@@ -137,212 +158,19 @@ export default function LiveVisitScreen() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                   <h2 style={{ margin: "0", fontSize: "16px", fontWeight: "800" }}>{"Today's tasks"}</h2>
-                  <span style={{ fontSize: "13px", fontWeight: "600", color: "#545454" }}>3 of 5 done</span>
+                  <span
+                    style={{ fontSize: "13px", fontWeight: "600", color: "#545454" }}
+                  >{`${tasks.done} of ${tasks.all.length} done`}</span>
                 </div>{" "}
-                <div style={{ border: "1px solid #E2E2E2", borderRadius: "14px", overflow: "hidden" }}>
-                  <div
-                    style={{
-                      padding: "10px 14px",
-                      background: "#F6F6F6",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                      color: "#545454",
-                    }}
-                  >
-                    Today only
-                  </div>{" "}
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px" }}>
-                    <span
-                      style={{
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "9px",
-                        border: "2px solid #A6A6A6",
-                        boxSizing: "border-box",
-                      }}
-                    ></span>
-                    <span style={{ flex: "1", fontSize: "14px", fontWeight: "600" }}>Let the electrician in</span>
-                    <span
-                      style={{
-                        height: "18px",
-                        padding: "0 8px",
-                        borderRadius: "9px",
-                        background: "#E6F4EC",
-                        color: "#05663A",
-                        display: "flex",
-                        alignItems: "center",
-                        fontSize: "11px",
-                        fontWeight: "700",
-                      }}
-                    >
-                      Seen 6:12
-                    </span>
-                    <span style={{ fontSize: "12px", color: "#545454", width: "32px", textAlign: "right" }}>11:00</span>
-                  </div>{" "}
-                  <div
-                    style={{
-                      padding: "10px 14px",
-                      background: "#F6F6F6",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                      color: "#545454",
-                      borderTop: "1px solid #E2E2E2",
-                    }}
-                  >
-                    This booking
-                  </div>{" "}
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px" }}>
-                    <span
-                      style={{
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "9px",
-                        background: "#05944F",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <svg
-                        width="11"
-                        height="11"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#FFFFFF"
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M5 12l5 5 9-10"></path>
-                      </svg>
-                    </span>
-                    <span
-                      style={{
-                        flex: "1",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        color: "#545454",
-                        textDecoration: "line-through",
-                      }}
-                    >
-                      Knee exercises from physio
-                    </span>
-                    <span style={{ fontSize: "12px", color: "#545454", width: "32px", textAlign: "right" }}>10:30</span>
-                  </div>{" "}
-                  <div
-                    style={{
-                      padding: "10px 14px",
-                      background: "#F6F6F6",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                      color: "#545454",
-                      borderTop: "1px solid #E2E2E2",
-                    }}
-                  >
-                    Every visit
-                  </div>{" "}
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px" }}>
-                    <span
-                      style={{
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "9px",
-                        background: "#05944F",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <svg
-                        width="11"
-                        height="11"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#FFFFFF"
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M5 12l5 5 9-10"></path>
-                      </svg>
-                    </span>
-                    <span
-                      style={{
-                        flex: "1",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        color: "#545454",
-                        textDecoration: "line-through",
-                      }}
-                    >
-                      Walk in the garden
-                    </span>
-                    <span style={{ fontSize: "12px", color: "#545454", width: "32px", textAlign: "right" }}>9:00</span>
-                  </div>{" "}
-                  <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "50px" }}></div>{" "}
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px" }}>
-                    <span
-                      style={{
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "9px",
-                        background: "#05944F",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <svg
-                        width="11"
-                        height="11"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#FFFFFF"
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M5 12l5 5 9-10"></path>
-                      </svg>
-                    </span>
-                    <span
-                      style={{
-                        flex: "1",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        color: "#545454",
-                        textDecoration: "line-through",
-                      }}
-                    >
-                      Medicine reminder
-                    </span>
-                    <span style={{ fontSize: "12px", color: "#545454", width: "32px", textAlign: "right" }}>10:00</span>
-                  </div>{" "}
-                  <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "50px" }}></div>{" "}
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px" }}>
-                    <span
-                      style={{
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "9px",
-                        border: "2px solid #A6A6A6",
-                        boxSizing: "border-box",
-                      }}
-                    ></span>
-                    <span style={{ flex: "1", fontSize: "14px", fontWeight: "600" }}>Help with lunch</span>
-                    <span style={{ fontSize: "12px", color: "#545454", width: "32px", textAlign: "right" }}>11:30</span>
-                  </div>
-                </div>{" "}
-                <form style={{ display: "flex", gap: "8px" }}>
+                <LiveTaskList
+                  groups={[
+                    { label: "Today only", tasks: tasks.today },
+                    { label: "This booking", tasks: tasks.booking },
+                    { label: "Every visit", tasks: tasks.routine },
+                  ]}
+                  done={demo.doneToday}
+                />{" "}
+                <form onSubmit={addTask.submit} style={{ display: "flex", gap: "8px" }}>
                   <label
                     style={{
                       flex: "1",
@@ -358,6 +186,8 @@ export default function LiveVisitScreen() {
                     <input
                       aria-label="Add a task for today"
                       placeholder="Add a task for today"
+                      value={addTask.value}
+                      onChange={addTask.onChange}
                       style={{
                         flex: "1",
                         minWidth: "0",
@@ -370,7 +200,7 @@ export default function LiveVisitScreen() {
                     />
                   </label>
                   <button
-                    type="button"
+                    type="submit"
                     style={{
                       height: "38px",
                       padding: "0 14px",
@@ -598,12 +428,12 @@ export default function LiveVisitScreen() {
               }}
             >
               <img
-                src="/images/nirmala.png"
+                src={cg.avatar}
                 alt=""
                 style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }}
               />
               <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
-                <span style={{ fontSize: "14px", fontWeight: "700" }}>Nirmala</span>
+                <span style={{ fontSize: "14px", fontWeight: "700" }}>{cg.first}</span>
                 <span style={{ fontSize: "12px", color: "#05663A" }}>Online</span>
               </span>
               <Link
@@ -662,86 +492,14 @@ export default function LiveVisitScreen() {
                 </svg>
               </Link>
             </div>{" "}
-            <div
-              style={{
-                flex: "1",
-                padding: "14px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-                overflow: "hidden",
-              }}
+            <ChatLog
+              messages={(thread?.messages ?? []).filter((m) => m.from !== "note")}
+              style={{ maxHeight: "460px" }}
+            />{" "}
+            <form
+              onSubmit={chat.submit}
+              style={{ display: "flex", gap: "8px", padding: "12px", borderTop: "1px solid #E2E2E2" }}
             >
-              <span style={{ alignSelf: "center", fontSize: "12px", fontWeight: "600", color: "#545454" }}>Today</span>{" "}
-              <div
-                style={{
-                  alignSelf: "flex-end",
-                  maxWidth: "260px",
-                  padding: "10px 12px",
-                  borderRadius: "18px 18px 6px 18px",
-                  background: "#000000",
-                  color: "#FFFFFF",
-                  fontSize: "14px",
-                  lineHeight: "1.4",
-                }}
-              >
-                Good morning! The electrician comes at 11, please let him in.
-              </div>{" "}
-              <div
-                style={{
-                  alignSelf: "flex-start",
-                  maxWidth: "260px",
-                  padding: "10px 12px",
-                  borderRadius: "18px 18px 18px 6px",
-                  background: "#EEEEEE",
-                  fontSize: "14px",
-                  lineHeight: "1.4",
-                }}
-              >
-                Noted. Amma says hello to Ruwan too.
-              </div>{" "}
-              <div
-                style={{
-                  alignSelf: "flex-start",
-                  maxWidth: "260px",
-                  borderRadius: "12px",
-                  overflow: "hidden",
-                  background: "#EEEEEE",
-                }}
-              >
-                <div
-                  style={{
-                    height: "140px",
-                    background: "linear-gradient(135deg, #C9D9C0, #8FAF86)",
-                    display: "flex",
-                    alignItems: "flex-end",
-                    padding: "10px",
-                    boxSizing: "border-box",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    color: "#1A2E14",
-                  }}
-                >
-                  Photo · garden walk
-                </div>
-                <div style={{ padding: "8px 12px", fontSize: "12px", color: "#545454" }}>9:21</div>
-              </div>{" "}
-              <div
-                style={{
-                  alignSelf: "flex-end",
-                  maxWidth: "260px",
-                  padding: "10px 12px",
-                  borderRadius: "18px 18px 6px 18px",
-                  background: "#000000",
-                  color: "#FFFFFF",
-                  fontSize: "14px",
-                  lineHeight: "1.4",
-                }}
-              >
-                She looks happy. Thank you!
-              </div>
-            </div>{" "}
-            <form style={{ display: "flex", gap: "8px", padding: "12px", borderTop: "1px solid #E2E2E2" }}>
               <label
                 style={{
                   flex: "1",
@@ -755,8 +513,10 @@ export default function LiveVisitScreen() {
                 }}
               >
                 <input
-                  aria-label="Message Nirmala"
+                  aria-label={`Message ${cg.first}`}
                   placeholder="Message"
+                  value={chat.value}
+                  onChange={chat.onChange}
                   style={{
                     flex: "1",
                     minWidth: "0",
@@ -769,7 +529,7 @@ export default function LiveVisitScreen() {
                 />
               </label>
               <button
-                type="button"
+                type="submit"
                 aria-label="Send"
                 style={{
                   width: "36px",

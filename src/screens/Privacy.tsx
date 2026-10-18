@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -25,7 +26,8 @@ class Logic extends DCLogic {
 }
 
 export default function PrivacyScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { persist: "privacy" });
   return (
     <div
       style={{
@@ -193,7 +195,7 @@ export default function PrivacyScreen() {
                   <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path>
                 </svg>
                 <span style={{ flex: "1", fontSize: "14px", fontWeight: "700" }}>Blocked caregivers</span>
-                <span style={{ fontSize: "13px", color: "#545454" }}>1</span>
+                <span style={{ fontSize: "13px", color: "#545454" }}>{demo.blocked.length}</span>
                 <span style={{ color: "#545454", display: "flex" }}>
                   <svg
                     width="16"

@@ -1,7 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { selectCaregiver } from "@/lib/actions";
+import { lkr } from "@/lib/format";
+import { reportVisit, visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 export default function TipSentScreen() {
+  const demo = useDemo();
+  const { v, cg, day, time, sub, fee } = visitView(reportVisit(demo));
+  const tip = lkr(demo.ui.lastTip?.amount ?? v.tip ?? 500);
+  const note = demo.ui.lastTip?.note?.trim();
   return (
     <div
       style={{
@@ -105,10 +115,10 @@ export default function TipSentScreen() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                Tip sent to Nirmala
+                {`Tip sent to ${cg.first}`}
               </h1>
               <span style={{ fontSize: "15px", lineHeight: "1.5", color: "#333333" }}>
-                {"LKR 500 and your note. She'll see it right away."}
+                {`${tip}${note ? " and your note" : ""}. She'll see it right away.`}
               </span>
             </div>
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
@@ -123,9 +133,9 @@ export default function TipSentScreen() {
               >
                 <span style={{ color: "#545454" }}>Tip</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  LKR 500
+                  {tip}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                    Visa ·· 4417 · receipt in Payments
+                    {`${v.card} · receipt in Payments`}
                   </span>
                 </span>
               </div>
@@ -140,12 +150,13 @@ export default function TipSentScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Review</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>5 ★ · posted</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{`${v.rating ?? 5} ★ · posted`}</span>
               </div>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <Link
                 href="/rebook"
+                onClick={() => selectCaregiver(cg.id)}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -162,7 +173,7 @@ export default function TipSentScreen() {
                   whiteSpace: "nowrap",
                 }}
               >
-                Book Nirmala again
+                {`Book ${cg.first} again`}
               </Link>
               <Link
                 href="/visits"
@@ -216,7 +227,7 @@ export default function TipSentScreen() {
               />
               <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
                 <span style={{ fontSize: "15px", fontWeight: "800" }}>Visit approved</span>
-                <span style={{ fontSize: "12px", color: "#545454" }}>Sat 17 Oct · 9:02 – 12:04 · with Amma</span>
+                <span style={{ fontSize: "12px", color: "#545454" }}>{`${day} · ${time} · with Amma`}</span>
               </span>
               <span
                 style={{
@@ -247,7 +258,7 @@ export default function TipSentScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Your rating</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>5 ★</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{`${v.rating ?? 5} ★`}</span>
               </div>
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
               <div
@@ -259,8 +270,8 @@ export default function TipSentScreen() {
                   fontSize: "14px",
                 }}
               >
-                <span style={{ color: "#545454" }}>Paid to Nirmala</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 3,600</span>
+                <span style={{ color: "#545454" }}>{`Paid to ${cg.first}`}</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{sub}</span>
               </div>
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
               <div
@@ -273,7 +284,7 @@ export default function TipSentScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Fee</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 360</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{fee}</span>
               </div>
             </div>
           </aside>

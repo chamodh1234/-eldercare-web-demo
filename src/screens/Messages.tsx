@@ -1,7 +1,41 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { useRef, useState } from "react";
+import { ChatLog } from "@/components/ChatLog";
+import { selectCaregiver, sendMessage } from "@/lib/actions";
+import { dayLabel } from "@/lib/format";
+import { caregiver } from "@/lib/mock/caregivers";
+import { mutate, useDemo } from "@/lib/store";
+import { useComposer } from "@/lib/useComposer";
+
+function selectThread(id: string) {
+  mutate((d) => {
+    d.selectedThread = id;
+    const t = d.threads.find((x) => x.id === id);
+    if (t) t.unread = 0;
+  });
+}
 
 export default function MessagesScreen() {
+  const demo = useDemo();
+  const [q, setQ] = useState("");
+  const file = useRef<HTMLInputElement>(null);
+  const needle = q.trim().toLowerCase();
+  const list = demo.threads.filter(
+    (t) => !needle || [t.name, ...t.messages.map((m) => m.text)].some((x) => x.toLowerCase().includes(needle)),
+  );
+  const thread = demo.threads.find((t) => t.id === demo.selectedThread) ?? demo.threads[0];
+  const cg = thread?.caregiverId ? caregiver(thread.caregiverId) : null;
+  const live = !!cg && demo.visits.some((v) => v.status === "live" && v.caregiverId === cg.id);
+  const next = cg
+    ? demo.visits
+        .filter((v) => v.caregiverId === cg.id && ["requested", "confirmed", "covering"].includes(v.status))
+        .sort((a, b) => a.date.localeCompare(b.date))[0]
+    : undefined;
+  const requests = Object.values(demo.requests).filter((r) => r === "new").length;
+  const composer = useComposer((text) => thread && sendMessage(thread.id, text));
   return (
     <div
       style={{
@@ -81,6 +115,8 @@ export default function MessagesScreen() {
               <input
                 aria-label="Search messages"
                 placeholder="Search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
                 style={{
                   flex: "1",
                   minWidth: "0",
@@ -150,195 +186,121 @@ export default function MessagesScreen() {
                     justifyContent: "center",
                   }}
                 >
-                  2
+                  {requests}
                 </span>
               </Link>
             </div>
             <nav style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              <Link
-                href="/messages"
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  alignItems: "center",
-                  padding: "12px 14px",
-                  borderRadius: "12px",
-                  background: "#F6F6F6",
-                }}
-              >
-                <img
-                  src="/images/nirmala.png"
-                  alt=""
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    display: "block",
-                    flexShrink: "0",
-                  }}
-                />
-                <span style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ display: "flex", justifyContent: "space-between", gap: "8px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: "700" }}>Nirmala Perera</span>
-                    <span style={{ fontSize: "12px", color: "#545454" }}>11:05</span>
-                  </span>
-                  <span
+              {list.map((t) => {
+                const on = t.id === thread?.id;
+                const last = t.messages[t.messages.length - 1];
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    aria-current={on ? "true" : undefined}
+                    onClick={() => selectThread(t.id)}
                     style={{
-                      fontSize: "13px",
-                      color: "#545454",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
+                      display: "flex",
+                      gap: "12px",
+                      alignItems: "center",
+                      padding: "12px 14px",
+                      borderRadius: "12px",
+                      background: on ? "#F6F6F6" : "transparent",
+                      border: "none",
+                      width: "100%",
+                      textAlign: "left",
+                      color: "#000000",
+                      fontFamily: "var(--font-figtree), sans-serif",
                     }}
                   >
-                    Noted. Amma says hello to Ruwan too.
-                  </span>
-                </span>
-              </Link>
-              <Link
-                href="/messages"
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  alignItems: "center",
-                  padding: "12px 14px",
-                  borderRadius: "12px",
-                  background: "transparent",
-                }}
-              >
-                <img
-                  src="/images/mala.png"
-                  alt=""
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    display: "block",
-                    flexShrink: "0",
-                  }}
-                />
-                <span style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ display: "flex", justifyContent: "space-between", gap: "8px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: "700" }}>Mala Wickrama</span>
-                    <span style={{ fontSize: "12px", color: "#545454" }}>Mon</span>
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "13px",
-                      color: "#545454",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    Yes, I can cover Tue 20 to Thu 22.
-                  </span>
-                </span>
-                <span
-                  style={{
-                    minWidth: "18px",
-                    height: "18px",
-                    borderRadius: "9px",
-                    background: "#276EF1",
-                    color: "#FFFFFF",
-                    fontSize: "11px",
-                    fontWeight: "700",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  1
-                </span>
-              </Link>
-              <Link
-                href="/messages"
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  alignItems: "center",
-                  padding: "12px 14px",
-                  borderRadius: "12px",
-                  background: "transparent",
-                }}
-              >
-                <img
-                  src="/images/shanthi.png"
-                  alt=""
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    display: "block",
-                    flexShrink: "0",
-                  }}
-                />
-                <span style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ display: "flex", justifyContent: "space-between", gap: "8px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: "700" }}>Shanthi Rajapaksha</span>
-                    <span style={{ fontSize: "12px", color: "#545454" }}>Sep 22</span>
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "13px",
-                      color: "#545454",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    Thank you for the review, Dilani!
-                  </span>
-                </span>
-              </Link>
-              <Link
-                href="/messages"
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  alignItems: "center",
-                  padding: "12px 14px",
-                  borderRadius: "12px",
-                }}
-              >
-                <span
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "20px",
-                    background: "#000000",
-                    color: "#FFFFFF",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700" }}>Gloocan Support</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>The first one was only a hold…</span>
-                </span>
-              </Link>
+                    {t.avatar ? (
+                      <img
+                        src={t.avatar}
+                        alt=""
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          display: "block",
+                          flexShrink: "0",
+                        }}
+                      />
+                    ) : (
+                      <span
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "20px",
+                          background: "#000000",
+                          color: "#FFFFFF",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: "0",
+                        }}
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"></path>
+                        </svg>
+                      </span>
+                    )}
+                    <span style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <span style={{ display: "flex", justifyContent: "space-between", gap: "8px" }}>
+                        <span style={{ fontSize: "14px", fontWeight: "700" }}>{t.name}</span>
+                        <span style={{ fontSize: "12px", color: "#545454" }}>{t.time}</span>
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "13px",
+                          color: "#545454",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {last?.text ?? "No messages yet"}
+                      </span>
+                    </span>
+                    {t.unread > 0 ? (
+                      <span
+                        style={{
+                          minWidth: "18px",
+                          height: "18px",
+                          borderRadius: "9px",
+                          background: "#276EF1",
+                          color: "#FFFFFF",
+                          fontSize: "11px",
+                          fontWeight: "700",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {t.unread}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+              {list.length === 0 ? (
+                <span style={{ padding: "12px 14px", fontSize: "13px", color: "#545454" }}>No chats match.</span>
+              ) : null}
             </nav>
           </aside>
           <section
-            aria-label="Chat with Nirmala"
+            aria-label={`Chat with ${thread?.name ?? ""}`}
             style={{
               flex: "999 1 460px",
               minWidth: "0",
@@ -360,7 +322,7 @@ export default function MessagesScreen() {
               }}
             >
               <img
-                src="/images/nirmala.png"
+                src={thread?.avatar ?? "/images/dilani.png"}
                 alt=""
                 style={{
                   width: "40px",
@@ -372,8 +334,14 @@ export default function MessagesScreen() {
                 }}
               />
               <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
-                <span style={{ fontSize: "15px", fontWeight: "800" }}>Nirmala Perera</span>
-                <span style={{ fontSize: "12px", color: "#05663A" }}>Online · with Amma now</span>
+                <span style={{ fontSize: "15px", fontWeight: "800" }}>{thread?.name}</span>
+                <span style={{ fontSize: "12px", color: live ? "#05663A" : "#545454" }}>
+                  {live
+                    ? "Online · with Amma now"
+                    : cg
+                      ? "Usually replies within an hour"
+                      : "Replies in about 2 minutes"}
+                </span>
               </span>
               <Link
                 href="/voice-call"
@@ -431,179 +399,77 @@ export default function MessagesScreen() {
                 </svg>
               </Link>
             </div>
-            <div
-              style={{
-                flex: "1",
-                padding: "16px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-                overflow: "hidden",
-                background: "#FFFFFF",
-              }}
+            <ChatLog
+              full
+              messages={thread?.messages ?? []}
+              header={
+                live ? (
+                  <Link
+                    href="/live-visit"
+                    style={{
+                      alignSelf: "center",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      border: "1px solid #E2E2E2",
+                      borderRadius: "12px",
+                      padding: "8px 12px",
+                    }}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="4" y="5" width="16" height="16" rx="2"></rect>
+                      <path d="M4 10h16M9 3v4M15 3v4"></path>
+                    </svg>
+                    <span style={{ fontSize: "13px", fontWeight: "700" }}>Today · 9:00 – 12:00 · Companionship</span>
+                    <span
+                      style={{
+                        height: "24px",
+                        padding: "0 10px",
+                        borderRadius: "12px",
+                        background: "#E6F4EC",
+                        color: "#05663A",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontSize: "12px",
+                        fontWeight: "700",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Live
+                    </span>
+                  </Link>
+                ) : null
+              }
+            />
+            <form
+              onSubmit={composer.submit}
+              style={{ display: "flex", gap: "8px", padding: "12px", borderTop: "1px solid #E2E2E2" }}
             >
-              <Link
-                href="/live-visit"
-                style={{
-                  alignSelf: "center",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  border: "1px solid #E2E2E2",
-                  borderRadius: "12px",
-                  padding: "8px 12px",
+              <input
+                ref={file}
+                type="file"
+                hidden
+                onChange={(e) => {
+                  const name = e.target.files?.[0]?.name;
+                  if (name && thread) sendMessage(thread.id, `Attachment · ${name}`);
+                  e.target.value = "";
                 }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="4" y="5" width="16" height="16" rx="2"></rect>
-                  <path d="M4 10h16M9 3v4M15 3v4"></path>
-                </svg>
-                <span style={{ fontSize: "13px", fontWeight: "700" }}>Today · 9:00 – 12:00 · Companionship</span>
-                <span
-                  style={{
-                    height: "24px",
-                    padding: "0 10px",
-                    borderRadius: "12px",
-                    background: "#E6F4EC",
-                    color: "#05663A",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Live
-                </span>
-              </Link>
-              <span style={{ alignSelf: "center", fontSize: "12px", fontWeight: "600", color: "#545454" }}>Today</span>
-              <div
-                style={{
-                  alignSelf: "flex-end",
-                  maxWidth: "420px",
-                  padding: "10px 14px",
-                  borderRadius: "18px 18px 6px 18px",
-                  background: "#000000",
-                  color: "#FFFFFF",
-                  fontSize: "14px",
-                  lineHeight: "1.45",
-                }}
-              >
-                Good morning! The electrician comes at 11, please let him in.
-              </div>
-              <div
-                style={{
-                  alignSelf: "flex-start",
-                  maxWidth: "420px",
-                  padding: "10px 14px",
-                  borderRadius: "18px 18px 18px 6px",
-                  background: "#EEEEEE",
-                  fontSize: "14px",
-                  lineHeight: "1.45",
-                }}
-              >
-                {"Noted. I'll stay with Amma while he works."}
-              </div>
-              <div
-                style={{
-                  alignSelf: "flex-start",
-                  width: "220px",
-                  borderRadius: "16px",
-                  overflow: "hidden",
-                  background: "#EEEEEE",
-                }}
-              >
-                <div
-                  style={{
-                    height: "130px",
-                    background: "linear-gradient(135deg, #C9D9C0, #8FAF86)",
-                    display: "flex",
-                    alignItems: "flex-end",
-                    padding: "10px",
-                    boxSizing: "border-box",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    color: "#1A2E14",
-                  }}
-                >
-                  Photo · garden walk
-                </div>
-                <div style={{ padding: "6px 10px", fontSize: "12px", color: "#545454" }}>9:21</div>
-              </div>
-              <div
-                style={{
-                  alignSelf: "flex-end",
-                  maxWidth: "420px",
-                  padding: "10px 14px",
-                  borderRadius: "18px 18px 6px 18px",
-                  background: "#000000",
-                  color: "#FFFFFF",
-                  fontSize: "14px",
-                  lineHeight: "1.45",
-                }}
-              >
-                She looks happy. Thank you!
-              </div>
-              <div
-                style={{
-                  alignSelf: "center",
-                  maxWidth: "420px",
-                  padding: "8px 12px",
-                  borderRadius: "10px",
-                  background: "#EAF0FD",
-                  color: "#1A4FB5",
-                  fontSize: "12px",
-                  fontWeight: "600",
-                  display: "flex",
-                  gap: "6px",
-                  alignItems: "center",
-                }}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="5" y="11" width="14" height="9" rx="2"></rect>
-                  <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
-                </svg>
-                A phone number was hidden. Keep chatting here so visits stay insured.
-              </div>
-              <div
-                style={{
-                  alignSelf: "flex-start",
-                  maxWidth: "420px",
-                  padding: "10px 14px",
-                  borderRadius: "18px 18px 18px 6px",
-                  background: "#EEEEEE",
-                  fontSize: "14px",
-                  lineHeight: "1.45",
-                }}
-              >
-                Noted. Amma says hello to Ruwan too.
-              </div>
-            </div>
-            <form style={{ display: "flex", gap: "8px", padding: "12px", borderTop: "1px solid #E2E2E2" }}>
+              />
               <button
                 type="button"
                 aria-label="Attach"
+                onClick={() => file.current?.click()}
                 style={{
                   width: "40px",
                   height: "40px",
@@ -644,7 +510,9 @@ export default function MessagesScreen() {
               >
                 <input
                   aria-label="Message"
-                  placeholder="Message Nirmala"
+                  placeholder={`Message ${thread?.name.split(" ")[0] ?? ""}`}
+                  value={composer.value}
+                  onChange={composer.onChange}
                   style={{
                     flex: "1",
                     minWidth: "0",
@@ -656,7 +524,7 @@ export default function MessagesScreen() {
                 />
               </label>
               <button
-                type="button"
+                type="submit"
                 aria-label="Send"
                 style={{
                   width: "40px",
@@ -686,139 +554,148 @@ export default function MessagesScreen() {
               </button>
             </form>
           </section>
-          <aside
-            style={{
-              flex: "1 1 260px",
-              maxWidth: "300px",
-              minWidth: "0",
-              display: "flex",
-              flexDirection: "column",
-              gap: "14px",
-            }}
-          >
-            <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
-              <div
-                style={{
-                  padding: "16px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "8px",
-                  textAlign: "center",
-                }}
-              >
-                <img
-                  src="/images/nirmala.png"
-                  alt=""
+          {cg ? (
+            <aside
+              style={{
+                flex: "1 1 260px",
+                maxWidth: "300px",
+                minWidth: "0",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+              }}
+            >
+              <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
+                <div
                   style={{
-                    width: "64px",
-                    height: "64px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    display: "block",
-                    flexShrink: "0",
-                  }}
-                />
-                <span style={{ fontSize: "16px", fontWeight: "800" }}>Nirmala Perera</span>
-                <span style={{ fontSize: "12px", color: "#545454" }}>★ 4.9 · 18 visits with Amma</span>
-                <span
-                  style={{
-                    height: "24px",
-                    padding: "0 10px",
-                    borderRadius: "12px",
-                    background: "#E6F4EC",
-                    color: "#05663A",
-                    display: "inline-flex",
+                    padding: "16px",
+                    display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
-                    gap: "4px",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    whiteSpace: "nowrap",
+                    gap: "8px",
+                    textAlign: "center",
                   }}
                 >
-                  Verified
-                </span>
-              </div>
-              <div style={{ height: "1px", background: "#E2E2E2" }}></div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "16px",
-                  padding: "12px 16px",
-                  fontSize: "14px",
-                }}
-              >
-                <span style={{ color: "#545454" }}>Next visit</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  Sat 17 Oct
-                  <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                    9:00 – 12:00
+                  <img
+                    src={cg?.avatar}
+                    alt=""
+                    style={{
+                      width: "64px",
+                      height: "64px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      display: "block",
+                      flexShrink: "0",
+                    }}
+                  />
+                  <span style={{ fontSize: "16px", fontWeight: "800" }}>{cg?.name}</span>
+                  <span style={{ fontSize: "12px", color: "#545454" }}>
+                    {`★ ${cg?.rating.toFixed(1)} · ${cg?.visitsWithAmma} visits with Amma`}
                   </span>
-                </span>
+                  <span
+                    style={{
+                      height: "24px",
+                      padding: "0 10px",
+                      borderRadius: "12px",
+                      background: "#E6F4EC",
+                      color: "#05663A",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Verified
+                  </span>
+                </div>
+                <div style={{ height: "1px", background: "#E2E2E2" }}></div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "16px",
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                  }}
+                >
+                  <span style={{ color: "#545454" }}>Next visit</span>
+                  <span style={{ fontWeight: "700", textAlign: "right" }}>
+                    {next ? dayLabel(next.date) : "None booked"}
+                    <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
+                      {next ? `${next.start} – ${next.end}` : ""}
+                    </span>
+                  </span>
+                </div>
+                <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "16px",
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                  }}
+                >
+                  <span style={{ color: "#545454" }}>Weekly care</span>
+                  <span style={{ fontWeight: "700", textAlign: "right" }}>
+                    {cg?.id === "nirmala" ? "Day 4 of 24" : "Not on weekly care"}
+                  </span>
+                </div>
               </div>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
-              <div
+              <Link
+                href="/profile"
+                onClick={() => cg && selectCaregiver(cg.id)}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "16px",
-                  padding: "12px 16px",
+                  height: "40px",
+                  padding: "0 18px",
+                  borderRadius: "20px",
+                  background: "#EEEEEE",
+                  color: "#000000",
                   fontSize: "14px",
+                  fontWeight: "600",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  boxSizing: "border-box",
+                  whiteSpace: "nowrap",
                 }}
               >
-                <span style={{ color: "#545454" }}>Weekly care</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>Day 4 of 24</span>
-              </div>
-            </div>
-            <Link
-              href="/profile"
-              style={{
-                height: "40px",
-                padding: "0 18px",
-                borderRadius: "20px",
-                background: "#EEEEEE",
-                color: "#000000",
-                fontSize: "14px",
-                fontWeight: "600",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                boxSizing: "border-box",
-                whiteSpace: "nowrap",
-              }}
-            >
-              View profile
-            </Link>
-            <Link
-              href="/book"
-              style={{
-                height: "40px",
-                padding: "0 18px",
-                borderRadius: "20px",
-                background: "#EEEEEE",
-                color: "#000000",
-                fontSize: "14px",
-                fontWeight: "600",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                boxSizing: "border-box",
-                whiteSpace: "nowrap",
-                marginTop: "-6px",
-              }}
-            >
-              Book again
-            </Link>
-            <Link
-              href="/messages"
-              style={{ fontSize: "13px", fontWeight: "600", color: "#C11500", textAlign: "center" }}
-            >
-              Report or block
-            </Link>
-          </aside>
+                View profile
+              </Link>
+              <Link
+                href="/book"
+                onClick={() => cg && selectCaregiver(cg.id)}
+                style={{
+                  height: "40px",
+                  padding: "0 18px",
+                  borderRadius: "20px",
+                  background: "#EEEEEE",
+                  color: "#000000",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  boxSizing: "border-box",
+                  whiteSpace: "nowrap",
+                  marginTop: "-6px",
+                }}
+              >
+                Book again
+              </Link>
+              <Link
+                href="/report-caregiver"
+                onClick={() => cg && selectCaregiver(cg.id)}
+                style={{ fontSize: "13px", fontWeight: "600", color: "#C11500", textAlign: "center" }}
+              >
+                Report or block
+              </Link>
+            </aside>
+          ) : null}
         </div>
       </main>
     </div>

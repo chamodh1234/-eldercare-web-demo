@@ -4,11 +4,19 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { days: ["M", "T", "W", "Th", "F", "Sa"], l: 1, r: 1 };
+    this.state = {
+      days: ["M", "T", "W", "Th", "F", "Sa"],
+      l: 1,
+      r: 1,
+      start: "Mon 12 Oct",
+      from: "9:00 AM",
+      to: "12:00 PM",
+    };
   }
   renderVals() {
     const W = ["M", "T", "W", "Th", "F", "Sa", "Su"];
@@ -43,12 +51,21 @@ class Logic extends DCLogic {
       rates: seg("r", ["LKR 1,000", "LKR 1,200", "LKR 1,400"]),
       weekly: fmt(per * 3 * rate * 1.1),
       per,
+      start: { value: this.state.start, onChange: (e) => this.setState({ start: e.target.value }) },
+      from: { value: this.state.from, onChange: (e) => this.setState({ from: e.target.value }) },
+      to: { value: this.state.to, onChange: (e) => this.setState({ to: e.target.value }) },
+      next: (e) => {
+        if (!this.state.days.length) {
+          e.preventDefault();
+          toast("Pick at least one day");
+        }
+      },
     };
   }
 }
 
 export default function JobScheduleScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { persist: "jobSchedule" });
   return (
     <div
       style={{
@@ -135,7 +152,7 @@ export default function JobScheduleScreen() {
               <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                 <span style={{ fontSize: "13px", fontWeight: "600" }}>Start date</span>
                 <input
-                  defaultValue="Mon 12 Oct"
+                  {...v.start}
                   style={{
                     height: "44px",
                     border: "1px solid #E2E2E2",
@@ -153,7 +170,7 @@ export default function JobScheduleScreen() {
               <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                 <span style={{ fontSize: "13px", fontWeight: "600" }}>From</span>
                 <input
-                  defaultValue="9:00 AM"
+                  {...v.from}
                   style={{
                     height: "44px",
                     border: "1px solid #E2E2E2",
@@ -171,7 +188,7 @@ export default function JobScheduleScreen() {
               <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                 <span style={{ fontSize: "13px", fontWeight: "600" }}>To</span>
                 <input
-                  defaultValue="12:00 PM"
+                  {...v.to}
                   style={{
                     height: "44px",
                     border: "1px solid #E2E2E2",
@@ -268,6 +285,7 @@ export default function JobScheduleScreen() {
             <div style={{ display: "flex", gap: "10px" }}>
               <Link
                 href="/job-review"
+                onClick={v.next}
                 style={{
                   height: "44px",
                   padding: "0 22px",

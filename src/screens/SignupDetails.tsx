@@ -2,11 +2,21 @@
 
 import Link from "next/link";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { mutate } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { terms: true, news: false };
+    this.state = {
+      terms: true,
+      news: false,
+      first: "Dilani",
+      last: "Fernando",
+      email: "dilani.f@example.com",
+      phone: "77 512 4120",
+      place: "Sri Lanka · Colombo",
+    };
   }
   renderVals() {
     const tg = (k) => {
@@ -18,12 +28,40 @@ class Logic extends DCLogic {
         flip: () => this.setState({ [k]: !on }),
       };
     };
-    return { terms: tg("terms"), news: tg("news") };
+    const st = this.state;
+    const field = (k) => ({ value: st[k], onChange: (e) => this.setState({ [k]: e.target.value }) });
+    return {
+      terms: tg("terms"),
+      news: tg("news"),
+      first: field("first"),
+      last: field("last"),
+      email: field("email"),
+      phone: field("phone"),
+      place: field("place"),
+      next: (e) => {
+        if (!st.first.trim() || !/\S+@\S+\.\S+/.test(st.email) || st.phone.replace(/\D/g, "").length < 9) {
+          e.preventDefault();
+          return toast("Add your name, a valid email and your mobile number");
+        }
+        if (!st.terms) {
+          e.preventDefault();
+          return toast("Please agree to the terms to continue");
+        }
+        mutate((d) => {
+          Object.assign(d.account, {
+            first: st.first.trim(),
+            last: st.last.trim(),
+            email: st.email.trim(),
+            phone: "+94 " + st.phone.trim(),
+          });
+        });
+      },
+    };
   }
 }
 
 export default function SignupDetailsScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { persist: "signupDetails" });
   return (
     <div
       style={{
@@ -250,7 +288,7 @@ export default function SignupDetailsScreen() {
               <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                 <span style={{ fontSize: "13px", fontWeight: "600" }}>First name</span>
                 <input
-                  defaultValue="Dilani"
+                  {...v.first}
                   style={{
                     height: "44px",
                     border: "1px solid #E2E2E2",
@@ -268,7 +306,7 @@ export default function SignupDetailsScreen() {
               <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                 <span style={{ fontSize: "13px", fontWeight: "600" }}>Last name</span>
                 <input
-                  defaultValue="Fernando"
+                  {...v.last}
                   style={{
                     height: "44px",
                     border: "1px solid #E2E2E2",
@@ -287,7 +325,7 @@ export default function SignupDetailsScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>Email · for receipts</span>
               <input
-                defaultValue="dilani.f@example.com"
+                {...v.email}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -334,7 +372,7 @@ export default function SignupDetailsScreen() {
                   </svg>
                 </span>
                 <input
-                  defaultValue="77 512 4120"
+                  {...v.phone}
                   style={{
                     flex: "1",
                     minWidth: "0",
@@ -350,7 +388,7 @@ export default function SignupDetailsScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>You live in</span>
               <input
-                defaultValue="Sri Lanka · Colombo"
+                {...v.place}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -440,6 +478,7 @@ export default function SignupDetailsScreen() {
             </div>
             <Link
               href="/setup-care"
+              onClick={v.next}
               style={{
                 height: "44px",
                 padding: "0 22px",

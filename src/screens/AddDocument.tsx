@@ -1,15 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment } from "react";
+import { Fragment, useRef } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/Toaster";
+import { mutate, newId } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { k: 0, see: true, remind: true };
+    this.state = {
+      k: 0,
+      see: true,
+      remind: true,
+      name: "Prescription · Dr. Gunasekara",
+      until: "12 Jan 2027",
+      files: ["prescription.jpg"],
+    };
   }
   renderVals() {
     const pick1 = (key, labels) =>
@@ -32,16 +42,46 @@ class Logic extends DCLogic {
         flip: () => this.setState({ [k]: !on }),
       };
     };
+    const KINDS = ["Prescription", "Doctor's note", "Lab report", "Other"];
+    const ABBR = ["Rx", "Note", "Lab", "Doc"];
+    const { router } = this.props;
+    const st = this.state;
     return {
-      kinds: pick1("k", ["Prescription", "Doctor's note", "Lab report", "Other"]),
+      kinds: pick1("k", KINDS),
       see: tg("see"),
       remind: tg("remind"),
+      name: { value: st.name, onChange: (e) => this.setState({ name: e.target.value }) },
+      until: { value: st.until, onChange: (e) => this.setState({ until: e.target.value }) },
+      file: st.files[0] ?? "No file yet",
+      more:
+        st.files.length > 1
+          ? `${st.files.length - 1} more page${st.files.length > 2 ? "s" : ""} added`
+          : "Drop more pages here",
+      addFiles: (list) => this.setState({ files: [...st.files, ...Array.from(list).map((f: any) => f.name)] }),
+      save: (e) => {
+        e.preventDefault();
+        if (!st.name.trim()) return toast("Give the document a name");
+        mutate((d) => {
+          d.docs.unshift({
+            id: newId("d"),
+            kind: KINDS[st.k],
+            abbr: ABBR[st.k],
+            title: st.name.trim(),
+            sub: `Added today${st.until.trim() ? " · valid till " + st.until.trim() : ""}`,
+            caregivers: st.see,
+          });
+        });
+        toast(st.remind && st.until.trim() ? "Saved · we'll remind you a week before it runs out" : "Document saved");
+        router.push("/care-docs");
+      },
     };
   }
 }
 
 export default function AddDocumentScreen() {
-  const v = useLogic(Logic);
+  const router = useRouter();
+  const files = useRef<HTMLInputElement>(null);
+  const v = useLogic(Logic, { props: { router } });
   return (
     <div
       style={{
@@ -165,10 +205,29 @@ export default function AddDocumentScreen() {
                 color: "#3A3226",
               }}
             >
-              prescription.jpg
+              {v.file}
             </div>
-            <div
+            <input
+              ref={files}
+              type="file"
+              multiple
+              hidden
+              onChange={(e) => {
+                if (e.target.files?.length) v.addFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => files.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (e.dataTransfer.files.length) v.addFiles(e.dataTransfer.files);
+              }}
               style={{
+                background: "#FFFFFF",
+                fontFamily: "var(--font-figtree), sans-serif",
                 flex: "1",
                 border: "1.5px dashed #A6A6A6",
                 borderRadius: "12px",
@@ -194,8 +253,8 @@ export default function AddDocumentScreen() {
               >
                 <path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path>
               </svg>
-              Drop more pages here
-            </div>
+              {v.more}
+            </button>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
             {v.kinds.map((t: any, i1: number) => (
@@ -222,7 +281,7 @@ export default function AddDocumentScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>Name</span>
               <input
-                defaultValue="Prescription · Dr. Gunasekara"
+                {...v.name}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -240,7 +299,7 @@ export default function AddDocumentScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>Valid till</span>
               <input
-                defaultValue="12 Jan 2027"
+                {...v.until}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -354,6 +413,7 @@ export default function AddDocumentScreen() {
             </Link>
             <Link
               href="/care-docs"
+              onClick={v.save}
               style={{
                 height: "44px",
                 padding: "0 22px",

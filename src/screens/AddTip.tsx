@@ -4,13 +4,20 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { sendTip } from "@/lib/actions";
+import { lkr } from "@/lib/format";
+import { reportVisit, visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { t: 2 };
+    this.state = { t: 2, note: "Thank you for being so patient with Amma." };
   }
   renderVals() {
+    const { demo, router } = this.props;
+    const { v: visit, cg, day, time, sub, fee } = visitView(reportVisit(demo));
     const pick1 = (key, labels) =>
       labels.map((l, i) => {
         const on = this.state[key] === i;
@@ -24,18 +31,36 @@ class Logic extends DCLogic {
       });
     const T = [0, 200, 500, 1000];
     const a = T[this.state.t];
-    const f = (n) => "LKR " + n.toLocaleString("en-US");
+    const stars = `${visit.rating ?? 5} ★`;
     return {
       tips: pick1("t", ["No tip", "LKR 200", "LKR 500", "LKR 1,000"]),
-      amt: f(a),
+      amt: lkr(a),
       some: a > 0,
-      cta: a ? "Send " + f(a) + " tip" : "Done",
+      cta: a ? "Send " + lkr(a) + " tip" : "Done",
+      head: `${day} · ${stars} for ${cg.first}`,
+      title: `Add a tip for ${cg.first}?`,
+      gets: `${cg.first} gets`,
+      noteLabel: `Note to ${cg.first} · optional`,
+      note: this.state.note,
+      setNote: (e) => this.setState({ note: e.target.value }),
+      card: `${day} · ${time} · with Amma`,
+      stars,
+      paidTo: `Paid to ${cg.first}`,
+      sub,
+      fee,
+      send: (e) => {
+        e.preventDefault();
+        sendTip(visit.id, a, this.state.note);
+        router.push(a ? "/tip-sent" : "/visits");
+      },
     };
   }
 }
 
 export default function AddTipScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { demo, router } });
   return (
     <div
       style={{
@@ -88,7 +113,7 @@ export default function AddTipScreen() {
                 >
                   Thanks for approving
                 </span>
-                <span style={{ fontSize: "14px", color: "#333333" }}>Sat 17 Oct · 5 ★ for Nirmala</span>
+                <span style={{ fontSize: "14px", color: "#333333" }}>{v.head}</span>
               </span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -101,7 +126,7 @@ export default function AddTipScreen() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                Add a tip for Nirmala?
+                {v.title}
               </h1>
               <span style={{ fontSize: "15px", color: "#545454" }}>
                 Optional. 100% goes to her, Gloocan takes nothing.
@@ -158,7 +183,7 @@ export default function AddTipScreen() {
                       fontSize: "14px",
                     }}
                   >
-                    <span style={{ color: "#545454" }}>Nirmala gets</span>
+                    <span style={{ color: "#545454" }}>{v.gets}</span>
                     <span style={{ fontWeight: "700", textAlign: "right" }}>
                       {v.amt}
                       <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
@@ -170,7 +195,7 @@ export default function AddTipScreen() {
               </>
             ) : null}
             <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <span style={{ fontSize: "13px", fontWeight: "600" }}>Note to Nirmala · optional</span>
+              <span style={{ fontSize: "13px", fontWeight: "600" }}>{v.noteLabel}</span>
               <textarea
                 rows={3}
                 style={{
@@ -182,12 +207,14 @@ export default function AddTipScreen() {
                   font: "500 14px var(--font-figtree), sans-serif",
                   lineHeight: "1.45",
                 }}
-                defaultValue="Thank you for being so patient with Amma."
+                value={v.note}
+                onChange={v.setNote}
               />
             </label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <Link
                 href="/tip-sent"
+                onClick={v.send}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -259,7 +286,7 @@ export default function AddTipScreen() {
               />
               <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
                 <span style={{ fontSize: "15px", fontWeight: "800" }}>Visit approved</span>
-                <span style={{ fontSize: "12px", color: "#545454" }}>Sat 17 Oct · 9:02 – 12:04 · with Amma</span>
+                <span style={{ fontSize: "12px", color: "#545454" }}>{v.card}</span>
               </span>
               <span
                 style={{
@@ -290,7 +317,7 @@ export default function AddTipScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Your rating</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>5 ★</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{v.stars}</span>
               </div>
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
               <div
@@ -302,8 +329,8 @@ export default function AddTipScreen() {
                   fontSize: "14px",
                 }}
               >
-                <span style={{ color: "#545454" }}>Paid to Nirmala</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 3,600</span>
+                <span style={{ color: "#545454" }}>{v.paidTo}</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{v.sub}</span>
               </div>
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
               <div
@@ -316,7 +343,7 @@ export default function AddTipScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Fee</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 360</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{v.fee}</span>
               </div>
             </div>
           </aside>

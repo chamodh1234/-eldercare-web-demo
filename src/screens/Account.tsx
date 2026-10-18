@@ -1,8 +1,63 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
+import { useRef, useState } from "react";
+import { toast } from "@/components/Toaster";
+import { readAvatar } from "@/lib/image";
+import { mutate, useDemo } from "@/lib/store";
+
+type Form = { name: string; email: string; area: string; timezone: string };
 
 export default function AccountScreen() {
+  const demo = useDemo();
+  const { account } = demo;
+  const saved: Form = {
+    name: `${account.first} ${account.last}`,
+    email: account.email,
+    area: account.area,
+    timezone: account.timezone,
+  };
+  // Unsaved edits; null means the form shows what's saved.
+  const [draft, setDraft] = useState<Form | null>(null);
+  const form = draft ?? saved;
+  const field = (k: keyof Form) => ({
+    value: form[k],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...form, [k]: e.target.value }),
+  });
+  const photo = useRef<HTMLInputElement>(null);
+  const visits = demo.visits.filter((v) => v.status !== "cancelled").length;
+  const save = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const [first, ...rest] = form.name.trim().split(/\s+/);
+    if (!first) return toast("Please enter your name");
+    mutate((d) => {
+      Object.assign(d.account, {
+        first,
+        last: rest.join(" "),
+        email: form.email,
+        area: form.area,
+        timezone: form.timezone,
+      });
+    });
+    setDraft(null);
+    toast("Profile saved");
+  };
+  const pickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const url = await readAvatar(file);
+      mutate((d) => {
+        d.account.photo = url;
+      });
+      toast("Photo updated");
+    } catch {
+      toast("That file isn't an image");
+    }
+  };
   return (
     <div
       style={{
@@ -48,7 +103,7 @@ export default function AccountScreen() {
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "16px", padding: "18px" }}>
                 <img
-                  src="/images/dilani.png"
+                  src={account.photo ?? "/images/dilani.png"}
                   alt=""
                   style={{
                     width: "64px",
@@ -60,11 +115,17 @@ export default function AccountScreen() {
                   }}
                 />
                 <span style={{ flex: "1 1 200px", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "18px", fontWeight: "800" }}>Dilani Fernando</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>Member since Aug 2026 · 22 visits booked</span>
+                  <span style={{ fontSize: "18px", fontWeight: "800" }}>{`${account.first} ${account.last}`}</span>
+                  <span
+                    style={{ fontSize: "13px", color: "#545454" }}
+                  >{`Member since Aug 2026 · ${visits} visits booked`}</span>
                 </span>
                 <Link
                   href="/account"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    photo.current?.click();
+                  }}
                   style={{
                     height: "40px",
                     padding: "0 18px",
@@ -83,6 +144,7 @@ export default function AccountScreen() {
                 >
                   Change photo
                 </Link>
+                <input ref={photo} type="file" accept="image/*" hidden onChange={pickPhoto} />
               </div>
             </div>
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
@@ -94,7 +156,7 @@ export default function AccountScreen() {
                   <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                     <span style={{ fontSize: "13px", fontWeight: "600" }}>Full name</span>
                     <input
-                      defaultValue="Dilani Fernando"
+                      {...field("name")}
                       style={{
                         height: "44px",
                         border: "1px solid #E2E2E2",
@@ -112,7 +174,8 @@ export default function AccountScreen() {
                   <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                     <span style={{ fontSize: "13px", fontWeight: "600" }}>Mobile</span>
                     <input
-                      defaultValue="+94 77 512 4120 · verified"
+                      value={`${account.phone} · verified`}
+                      readOnly
                       style={{
                         height: "44px",
                         border: "1px solid #E2E2E2",
@@ -130,7 +193,8 @@ export default function AccountScreen() {
                   <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                     <span style={{ fontSize: "13px", fontWeight: "600" }}>Email</span>
                     <input
-                      defaultValue="dilani.f@example.com"
+                      type="email"
+                      {...field("email")}
                       style={{
                         height: "44px",
                         border: "1px solid #E2E2E2",
@@ -148,7 +212,7 @@ export default function AccountScreen() {
                   <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                     <span style={{ fontSize: "13px", fontWeight: "600" }}>Home area</span>
                     <input
-                      defaultValue="Colombo 05"
+                      {...field("area")}
                       style={{
                         height: "44px",
                         border: "1px solid #E2E2E2",
@@ -170,7 +234,8 @@ export default function AccountScreen() {
                   <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                     <span style={{ fontSize: "13px", fontWeight: "600" }}>Language</span>
                     <input
-                      defaultValue="English"
+                      value={account.language}
+                      readOnly
                       style={{
                         height: "44px",
                         border: "1px solid #E2E2E2",
@@ -188,7 +253,7 @@ export default function AccountScreen() {
                   <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                     <span style={{ fontSize: "13px", fontWeight: "600" }}>Time zone</span>
                     <input
-                      defaultValue="Colombo (GMT+5:30)"
+                      {...field("timezone")}
                       style={{
                         height: "44px",
                         border: "1px solid #E2E2E2",
@@ -207,6 +272,7 @@ export default function AccountScreen() {
                 <div style={{ display: "flex", gap: "10px" }}>
                   <Link
                     href="/account"
+                    onClick={save}
                     style={{
                       height: "44px",
                       padding: "0 22px",
@@ -227,6 +293,10 @@ export default function AccountScreen() {
                   </Link>
                   <Link
                     href="/account"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setDraft(null);
+                    }}
                     style={{
                       height: "40px",
                       padding: "0 18px",
@@ -257,7 +327,7 @@ export default function AccountScreen() {
                   </span>
                 </span>
                 <Link
-                  href="/account"
+                  href="/delete-account"
                   style={{
                     height: "40px",
                     padding: "0 18px",

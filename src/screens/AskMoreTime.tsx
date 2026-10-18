@@ -4,6 +4,12 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { extensionCost, requestExtension } from "@/lib/actions";
+import { durationLabel, lkr, plusMinutes } from "@/lib/format";
+import { liveVisit, visitById } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
+
+const DURS = [30, 60, 120];
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -11,6 +17,9 @@ class Logic extends DCLogic {
     this.state = { d: 1, why: 0 };
   }
   renderVals() {
+    const { demo } = this.props;
+    const visit = liveVisit(demo) ?? visitById(demo, "v-1015");
+    const baseEnd = demo.extension?.status === "approved" ? visit.end : (demo.extension?.baseEnd ?? visit.end);
     const pick1 = (key, labels) =>
       labels.map((l, i) => {
         const on = this.state[key] === i;
@@ -22,31 +31,27 @@ class Logic extends DCLogic {
           pick: () => this.setState({ [key]: i }),
         };
       });
-    const D: [string, number, string][] = [
-      ["30 min", 600, "12:30 PM"],
-      ["1 hour", 1200, "1:00 PM"],
-      ["2 hours", 2400, "2:00 PM"],
-    ];
-    const d = D[this.state.d];
-    const fee = d[1] / 10;
-    const f = (n) => "LKR " + n.toLocaleString("en-US");
+    const mins = DURS[this.state.d];
+    const cost = extensionCost(visit.rate, mins);
     return {
-      durs: pick1(
-        "d",
-        D.map((x) => x[0]),
-      ),
+      durs: pick1("d", DURS.map(durationLabel)),
       whys: pick1("why", ["Stuck in traffic", "Work is running late", "Amma needs company", "Other"]),
-      until: d[2],
-      base: f(d[1]),
-      fee: f(fee),
-      total: f(d[1] + fee),
-      cta: "Ask Nirmala · " + f(d[1] + fee),
+      until: plusMinutes(baseEnd, mins),
+      instead: `Instead of ${plusMinutes(baseEnd, 0).replace(/^(\d+:\d+)$/, "$1 PM")}`,
+      ends: `Visit ends at ${baseEnd}. She can say yes or no.`,
+      base: lkr(cost.base),
+      rateLine: `${durationLabel(mins)} × ${lkr(visit.rate)}/hr`,
+      fee: lkr(cost.fee),
+      total: lkr(cost.total),
+      cta: "Ask Nirmala · " + lkr(cost.total),
+      ask: () => requestExtension(mins),
     };
   }
 }
 
 export default function AskMoreTimeScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{
@@ -161,7 +166,7 @@ export default function AskMoreTimeScreen() {
               <span style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.02em" }}>
                 Ask Nirmala to stay longer
               </span>
-              <span style={{ fontSize: "14px", color: "#545454" }}>Visit ends at 12:00. She can say yes or no.</span>
+              <span style={{ fontSize: "14px", color: "#545454" }}>{v.ends}</span>
             </span>
             <Link
               href="/live-visit"
@@ -253,7 +258,7 @@ export default function AskMoreTimeScreen() {
               <span style={{ fontWeight: "700", textAlign: "right" }}>
                 {v.until}
                 <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                  Instead of 12:00 PM
+                  {v.instead}
                 </span>
               </span>
             </div>
@@ -331,6 +336,7 @@ export default function AskMoreTimeScreen() {
               </Link>
               <Link
                 href="/more-time-waiting"
+                onClick={v.ask}
                 style={{
                   height: "44px",
                   padding: "0 22px",

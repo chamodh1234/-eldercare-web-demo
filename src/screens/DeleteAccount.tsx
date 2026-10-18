@@ -4,6 +4,9 @@ import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/Toaster";
+import { mutate, useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -11,20 +14,32 @@ class Logic extends DCLogic {
     this.state = { done: false };
   }
   renderVals() {
-    const d = this.state.done;
+    const { demo, router } = this.props;
+    const d = this.state.done || demo.weekly.status === "ended";
     return {
       mark: d ? "#05944F" : "transparent",
       ring: d ? "none" : "2px solid #A6A6A6",
-      fix: () => this.setState({ done: !d }),
+      fix: () => this.setState({ done: !this.state.done }),
       bBg: d ? "#FFEFED" : "#EEEEEE",
       bFg: d ? "#C11500" : "#545454",
       btn: d ? "Delete my account" : "Finish 1 thing first",
+      remove: (e) => {
+        e.preventDefault();
+        if (!d) return toast("End weekly care with Nirmala first");
+        mutate((s) => {
+          s.ui.deleteScheduled = true;
+          s.session.loggedIn = false;
+        });
+        router.push("/delete-scheduled");
+      },
     };
   }
 }
 
 export default function DeleteAccountScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { demo, router } });
   return (
     <div
       style={{
@@ -297,6 +312,7 @@ export default function DeleteAccountScreen() {
             <div style={{ display: "flex", gap: "10px" }}>
               <Link
                 href="/delete-scheduled"
+                onClick={v.remove}
                 style={{
                   height: "44px",
                   padding: "0 22px",

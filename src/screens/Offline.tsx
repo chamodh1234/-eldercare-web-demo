@@ -1,7 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/Toaster";
 
 export default function OfflineScreen() {
+  const router = useRouter();
+  const retry = (e: React.MouseEvent) => {
+    e.preventDefault();
+    toast("Back online");
+    if (window.history.length > 1) router.back();
+    else router.push("/visits");
+  };
   return (
     <div
       style={{
@@ -30,6 +41,7 @@ export default function OfflineScreen() {
         {"You're offline · showing what's saved on this device "}
         <Link
           href="/offline"
+          onClick={retry}
           style={{
             height: "30px",
             padding: "0 12px",
@@ -134,6 +146,7 @@ export default function OfflineScreen() {
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "10px", marginTop: "6px" }}>
             <Link
               href="/offline"
+              onClick={retry}
               style={{
                 height: "44px",
                 padding: "0 22px",

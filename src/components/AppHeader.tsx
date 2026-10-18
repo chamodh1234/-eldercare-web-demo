@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useDemo } from "@/lib/store";
 import { AlertIcon, BellIcon, CloseIcon, MenuIcon, PlusIcon } from "./icons";
 import styles from "./AppHeader.module.css";
 
@@ -24,6 +25,8 @@ type Props = {
 
 export function AppHeader({ active, action = "addTask", bell = true }: Props) {
   const [open, setOpen] = useState(false);
+  const { account, notices } = useDemo();
+  const unread = notices.filter((n) => n.unread).length;
 
   return (
     <header className={styles.header}>
@@ -60,15 +63,19 @@ export function AppHeader({ active, action = "addTask", bell = true }: Props) {
           </Link>
         )}
         {bell && (
-          <Link href="/notifications" aria-label="Notifications, 2 new" className={styles.bell}>
+          <Link
+            href="/notifications"
+            aria-label={unread ? `Notifications, ${unread} new` : "Notifications"}
+            className={styles.bell}
+          >
             <BellIcon />
-            <span className={styles.dot}></span>
+            {unread > 0 && <span className={styles.dot}></span>}
           </Link>
         )}
         <Link href="/account" aria-label="Your account" className={styles.account}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/dilani.png" alt="" className={styles.avatar} />
-          <span className={styles.accountName}>Dilani</span>
+          <img src={account.photo ?? "/images/dilani.png"} alt="" className={styles.avatar} />
+          <span className={styles.accountName}>{account.first}</span>
         </Link>
         <button
           type="button"

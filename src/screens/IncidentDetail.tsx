@@ -1,7 +1,22 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { useState } from "react";
+import { toast } from "@/components/Toaster";
+import { mutate, useDemo } from "@/lib/store";
+
+const ADVICE = "Rest today, ice 15 min after lunch. Come in Monday if it still hurts.";
 
 export default function IncidentDetailScreen() {
+  const demo = useDemo();
+  const [advice, setAdvice] = useState<string>(demo.ui.incidentAdvice ?? ADVICE);
+  const save = () => {
+    mutate((d) => {
+      d.ui.incidentAdvice = advice;
+    });
+    toast("Advice saved to Amma's care record");
+  };
   return (
     <div
       style={{
@@ -237,13 +252,17 @@ export default function IncidentDetailScreen() {
                   font: "500 14px var(--font-figtree), sans-serif",
                   lineHeight: "1.45",
                 }}
-                defaultValue="Rest today, ice 15 min after lunch. Come in Monday if it still hurts."
+                value={advice}
+                onChange={(e) => setAdvice(e.target.value)}
               />
             </label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-              <Link
-                href="/incident-detail"
+              <button
+                type="button"
+                onClick={save}
                 style={{
+                  border: "none",
+                  fontFamily: "var(--font-figtree), sans-serif",
                   height: "44px",
                   padding: "0 22px",
                   borderRadius: "22px",
@@ -260,9 +279,14 @@ export default function IncidentDetailScreen() {
                 }}
               >
                 Save advice
-              </Link>
+              </button>
               <Link
                 href="/add-task"
+                onClick={() =>
+                  mutate((d) => {
+                    d.ui.addTask = { w: 2, date: "2026-10-19", title: "Ice on the left hip, 15 min after lunch" };
+                  })
+                }
                 style={{
                   height: "40px",
                   padding: "0 18px",

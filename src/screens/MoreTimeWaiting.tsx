@@ -1,7 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { toast } from "@/components/Toaster";
+import { approveExtension, declineExtension, openChat } from "@/lib/actions";
+import { extensionView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 export default function MoreTimeWaitingScreen() {
+  const demo = useDemo();
+  const x = extensionView(demo);
+  const cover = demo.extension?.coverBy;
   return (
     <div
       style={{
@@ -97,10 +106,12 @@ export default function MoreTimeWaitingScreen() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                Waiting for Nirmala
+                {cover ? "Waiting for Mala" : "Waiting for Nirmala"}
               </h1>
               <span style={{ fontSize: "15px", color: "#545454" }}>
-                You asked her to stay 1 more hour, until 1:00 PM.
+                {cover
+                  ? `You asked Mala to cover until ${x.until}.`
+                  : `You asked her to stay ${x.mins === 60 ? "1 more hour" : x.dur + " more"}, until ${x.until}.`}
               </span>
             </div>
             <ol
@@ -203,7 +214,7 @@ export default function MoreTimeWaitingScreen() {
                 </span>
                 <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
                   <span style={{ fontSize: "14px", fontWeight: "700", color: "#333333" }}>Visit continues</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Until 1:00 PM if she says yes</span>
+                  <span style={{ fontSize: "12px", color: "#545454" }}>{`Until ${x.until} if she says yes`}</span>
                 </span>
               </li>
             </ol>
@@ -219,7 +230,7 @@ export default function MoreTimeWaitingScreen() {
               >
                 <span style={{ color: "#545454" }}>If she says yes</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  + LKR 1,320
+                  {`+ ${x.extra}`}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
                     Added to your hold
                   </span>
@@ -237,7 +248,7 @@ export default function MoreTimeWaitingScreen() {
               >
                 <span style={{ color: "#545454" }}>{"If she can't"}</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  Visit ends 12:00
+                  {`Visit ends ${x.baseEnd}`}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
                     Nothing charged · we help you find cover
                   </span>
@@ -247,6 +258,7 @@ export default function MoreTimeWaitingScreen() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <Link
                 href="/messages"
+                onClick={() => openChat("nirmala")}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -267,6 +279,10 @@ export default function MoreTimeWaitingScreen() {
               </Link>
               <Link
                 href="/live-visit"
+                onClick={() => {
+                  declineExtension();
+                  toast("Request cancelled");
+                }}
                 style={{
                   height: "40px",
                   padding: "0 18px",
@@ -288,7 +304,11 @@ export default function MoreTimeWaitingScreen() {
             </div>
             <span style={{ fontSize: "13px", color: "#545454" }}>
               {"Preview: "}
-              <Link href="/visit-extended" style={{ color: "#000000", fontWeight: "700", textDecoration: "underline" }}>
+              <Link
+                href="/visit-extended"
+                onClick={() => approveExtension(x.mins)}
+                style={{ color: "#000000", fontWeight: "700", textDecoration: "underline" }}
+              >
                 She says yes
               </Link>
               {" · "}
@@ -407,9 +427,9 @@ export default function MoreTimeWaitingScreen() {
               >
                 <span style={{ color: "#545454" }}>Ends</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  12:00 PM
+                  {x.baseEnd}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                    Asked for 1:00 PM
+                    {`Asked for ${x.until}`}
                   </span>
                 </span>
               </div>

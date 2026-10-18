@@ -1,18 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment } from "react";
+import { Fragment, useRef } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { sendMessage } from "@/lib/actions";
+import { nowTime } from "@/lib/format";
+import { mutate, useDemo } from "@/lib/store";
+import { useComposer } from "@/lib/useComposer";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { s: 0, done: [null, null] };
+    this.state = { s: 0 };
   }
   renderVals() {
+    const { demo } = this.props;
     const R = [
       {
+        id: "rohini",
         av: "/images/rohini.png",
         name: "Rohini Fernando",
         first: "Rohini",
@@ -33,6 +39,7 @@ class Logic extends DCLogic {
         rating: "4.9 ★ (52)",
       },
       {
+        id: "priya",
         av: "/images/priya.png",
         name: "Priya Senanayake",
         first: "Priya",
@@ -48,9 +55,11 @@ class Logic extends DCLogic {
       },
     ];
     const st = this.state;
+    const code = { accepted: "a", declined: "d", new: null };
+    const doneOf = (r) => code[demo.requests[r.id] ?? "new"];
     const list = R.map((r, i) => {
       const on = st.s === i;
-      const done = st.done[i];
+      const done = doneOf(r);
       return {
         ...r,
         pressed: on ? "true" : "false",
@@ -63,12 +72,27 @@ class Logic extends DCLogic {
       };
     });
     const sel = R[st.s];
-    const d = st.done[st.s];
-    const setDone = (v) => () => {
-      const nd = st.done.slice();
-      nd[st.s] = v;
-      this.setState({ done: nd });
-    };
+    const d = doneOf(sel);
+    const thread = demo.threads.find((t) => t.id === `th-${sel.id}`);
+    const greeting = `Hi ${sel.first}, thanks! Happy to answer. What would you like to know?`;
+    const setDone = (v) => () =>
+      mutate((s) => {
+        s.requests[sel.id] = v === "a" ? "accepted" : v === "d" ? "declined" : "new";
+        s.threads = s.threads.filter((t) => t.id !== `th-${sel.id}`);
+        if (v === "a")
+          s.threads.unshift({
+            id: `th-${sel.id}`,
+            name: sel.name,
+            avatar: sel.av,
+            caregiverId: sel.id,
+            time: nowTime(),
+            unread: 0,
+            messages: [
+              ...sel.msgs.map((m, i) => ({ id: `rq${i}`, from: "them" as const, text: m.t, time: m.time })),
+              { id: "rq-hi", from: "me" as const, text: greeting, time: nowTime() },
+            ],
+          });
+      });
     return {
       list,
       sel,
@@ -79,13 +103,18 @@ class Logic extends DCLogic {
       accept: setDone("a"),
       decline: setDone("d"),
       undo: setDone(null),
-      count: st.done.filter((x) => !x).length,
+      count: R.filter((r) => !doneOf(r)).length,
+      more: thread ? thread.messages.slice(sel.msgs.length + 1) : [],
+      threadId: thread?.id,
     };
   }
 }
 
 export default function ChatRequestsScreen() {
-  const v = useLogic(Logic);
+  const file = useRef<HTMLInputElement>(null);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo }, persist: "chatRequests" });
+  const composer = useComposer((text) => v.threadId && sendMessage(v.threadId, text));
   return (
     <div
       style={{
@@ -552,6 +581,24 @@ export default function ChatRequestsScreen() {
                     {v.sel.first}
                     {", thanks! Happy to answer. What would you like to know?"}
                   </div>
+                  {v.more.map((m: any) => (
+                    <div
+                      key={m.id}
+                      style={{
+                        alignSelf: m.from === "me" ? "flex-end" : "flex-start",
+                        maxWidth: "440px",
+                        padding: "10px 14px",
+                        borderRadius: m.from === "me" ? "18px 18px 6px 18px" : "18px 18px 18px 6px",
+                        background: m.from === "me" ? "#000000" : "#EEEEEE",
+                        color: m.from === "me" ? "#FFFFFF" : "#000000",
+                        fontSize: "14px",
+                        lineHeight: "1.45",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      {m.text}
+                    </div>
+                  ))}
                 </>
               ) : null}
               {v.declined ? (
@@ -657,10 +704,24 @@ export default function ChatRequestsScreen() {
             ) : null}
             {v.accepted ? (
               <>
-                <form style={{ display: "flex", gap: "8px", padding: "12px", borderTop: "1px solid #E2E2E2" }}>
+                <form
+                  onSubmit={composer.submit}
+                  style={{ display: "flex", gap: "8px", padding: "12px", borderTop: "1px solid #E2E2E2" }}
+                >
+                  <input
+                    ref={file}
+                    type="file"
+                    hidden
+                    onChange={(e) => {
+                      const name = e.target.files?.[0]?.name;
+                      if (name && v.threadId) sendMessage(v.threadId, `Attachment · ${name}`);
+                      e.target.value = "";
+                    }}
+                  />
                   <button
                     type="button"
                     aria-label="Attach"
+                    onClick={() => file.current?.click()}
                     style={{
                       width: "40px",
                       height: "40px",
@@ -702,6 +763,8 @@ export default function ChatRequestsScreen() {
                     <input
                       aria-label="Message"
                       placeholder="Message"
+                      value={composer.value}
+                      onChange={composer.onChange}
                       style={{
                         flex: "1",
                         minWidth: "0",
@@ -713,7 +776,7 @@ export default function ChatRequestsScreen() {
                     />
                   </label>
                   <button
-                    type="button"
+                    type="submit"
                     aria-label="Send"
                     style={{
                       width: "40px",

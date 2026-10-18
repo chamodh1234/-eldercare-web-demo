@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { toast } from "@/components/Toaster";
+import { approveExtension, declineExtension, openChat } from "@/lib/actions";
 
 export default function ExtendRequestScreen() {
   return (
@@ -239,6 +243,7 @@ export default function ExtendRequestScreen() {
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
             <Link
               href="/messages"
+              onClick={() => openChat("nirmala")}
               style={{
                 height: "40px",
                 padding: "0 18px",
@@ -259,6 +264,10 @@ export default function ExtendRequestScreen() {
             </Link>
             <Link
               href="/live-visit"
+              onClick={() => {
+                declineExtension();
+                toast("Declined · Nirmala leaves at 12:00");
+              }}
               style={{
                 height: "40px",
                 padding: "0 18px",
@@ -279,6 +288,7 @@ export default function ExtendRequestScreen() {
             </Link>
             <Link
               href="/visit-extended"
+              onClick={() => approveExtension(60)}
               style={{
                 height: "44px",
                 padding: "0 22px",

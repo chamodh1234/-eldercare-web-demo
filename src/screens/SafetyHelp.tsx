@@ -1,8 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
+import { caregiver } from "@/lib/mock/caregivers";
+import { useDemo } from "@/lib/store";
 
 export default function SafetyHelpScreen() {
+  const demo = useDemo();
+  const report = demo.reports[0];
+  const reportCg = caregiver(report?.caregiverId ?? "nirmala");
   return (
     <div
       style={{
@@ -90,8 +97,8 @@ export default function SafetyHelpScreen() {
                 <span style={{ fontSize: "13px", color: "#333333" }}>Call emergency services first, then tell us.</span>
               </span>
               <span style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                <Link
-                  href="/safety-help"
+                <a
+                  href="tel:119"
                   style={{
                     height: "40px",
                     padding: "0 16px",
@@ -119,9 +126,9 @@ export default function SafetyHelpScreen() {
                     <path d="M5 4h3.5l1.5 4.5-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"></path>
                   </svg>
                   Police 119
-                </Link>
-                <Link
-                  href="/safety-help"
+                </a>
+                <a
+                  href="tel:1990"
                   style={{
                     height: "40px",
                     padding: "0 16px",
@@ -149,12 +156,12 @@ export default function SafetyHelpScreen() {
                     <path d="M5 4h3.5l1.5 4.5-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"></path>
                   </svg>
                   Ambulance 1990
-                </Link>
+                </a>
               </span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
-              <Link
-                href="/safety-help"
+              <a
+                href="tel:+94117550000"
                 style={{
                   border: "1px solid #E2E2E2",
                   borderRadius: "16px",
@@ -193,7 +200,7 @@ export default function SafetyHelpScreen() {
                 <span style={{ fontSize: "13px", color: "#545454", lineHeight: "1.45" }}>
                   24/7 · +94 11 755 0000 · Sinhala, Tamil, English
                 </span>
-              </Link>
+              </a>
               <Link
                 href="/report-caregiver"
                 style={{
@@ -338,8 +345,10 @@ export default function SafetyHelpScreen() {
                   }}
                 />
                 <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "800" }}>GL-20418 · Theft or missing items</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Nirmala Perera · sent today 10:42</span>
+                  <span style={{ fontSize: "14px", fontWeight: "800" }}>{`${report?.ref} · ${report?.reason}`}</span>
+                  <span
+                    style={{ fontSize: "12px", color: "#545454" }}
+                  >{`${reportCg.name} · sent ${report?.sent}`}</span>
                 </span>
                 <span
                   style={{

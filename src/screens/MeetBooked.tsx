@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { openChat, selectCaregiver } from "@/lib/actions";
 
 export default function MeetBookedScreen() {
   return (
@@ -208,6 +211,7 @@ export default function MeetBookedScreen() {
               </Link>
               <Link
                 href="/messages"
+                onClick={() => openChat("mala")}
                 style={{
                   height: "40px",
                   padding: "0 18px",
@@ -312,6 +316,7 @@ export default function MeetBookedScreen() {
             </div>
             <Link
               href="/profile"
+              onClick={() => selectCaregiver("mala")}
               style={{
                 height: "40px",
                 padding: "0 18px",

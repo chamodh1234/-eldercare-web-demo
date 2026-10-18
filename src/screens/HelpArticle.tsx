@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { article } from "@/lib/mock/help";
+import { mutate, useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -35,7 +37,15 @@ class Logic extends DCLogic {
 }
 
 export default function HelpArticleScreen() {
+  const demo = useDemo();
+  const art = article(demo.ui.article);
   const v = useLogic(Logic);
+  const open = (id: string) => {
+    mutate((d) => {
+      d.ui.article = id === art.id ? "card-charged" : id;
+    });
+    window.scrollTo({ top: 0 });
+  };
   return (
     <div
       style={{
@@ -103,7 +113,7 @@ export default function HelpArticleScreen() {
                   color: "#545454",
                 }}
               >
-                {"Payments & refunds"}
+                {art.topic}
               </span>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <h1
@@ -115,173 +125,195 @@ export default function HelpArticleScreen() {
                     letterSpacing: "-0.025em",
                   }}
                 >
-                  When is my card charged?
+                  {art.title}
                 </h1>
               </div>
               <span style={{ fontSize: "13px", color: "#545454" }}>Updated 2 Oct 2026 · 2 min read</span>
             </div>
-            <p style={{ margin: "0", fontSize: "16px", lineHeight: "1.6", color: "#333333", maxWidth: "680px" }}>
-              {"We "}
-              <b>hold</b>
-              {
-                " the amount on your card when you book. The caregiver is paid only after you approve the visit, or 24 hours after check-out if you do nothing."
-              }
-            </p>
-            <ol
-              style={{
-                listStyle: "none",
-                margin: "0",
-                padding: "0",
-                border: "1px solid #E2E2E2",
-                borderRadius: "16px",
-                overflow: "hidden",
-              }}
-            >
-              <li style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px" }}>
-                <span
+            {art.id === "card-charged" ? (
+              <>
+                <p style={{ margin: "0", fontSize: "16px", lineHeight: "1.6", color: "#333333", maxWidth: "680px" }}>
+                  {"We "}
+                  <b>hold</b>
+                  {
+                    " the amount on your card when you book. The caregiver is paid only after you approve the visit, or 24 hours after check-out if you do nothing."
+                  }
+                </p>
+                <ol
                   style={{
-                    width: "24px",
-                    height: "24px",
-                    borderRadius: "12px",
-                    background: "#05944F",
-                    color: "#FFFFFF",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
+                    listStyle: "none",
+                    margin: "0",
+                    padding: "0",
+                    border: "1px solid #E2E2E2",
+                    borderRadius: "16px",
+                    overflow: "hidden",
                   }}
                 >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
+                  <li style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px" }}>
+                    <span
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        borderRadius: "12px",
+                        background: "#05944F",
+                        color: "#FFFFFF",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: "0",
+                      }}
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M5 12l5 5 9-10"></path>
+                      </svg>
+                    </span>
+                    <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: "700", color: "#000000" }}>You book</span>
+                      <span style={{ fontSize: "12px", color: "#545454" }}>Amount is held on your card, not taken</span>
+                    </span>
+                  </li>
+                  <li
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      padding: "12px 16px",
+                      borderTop: "1px solid #E2E2E2",
+                    }}
                   >
-                    <path d="M5 12l5 5 9-10"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700", color: "#000000" }}>You book</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Amount is held on your card, not taken</span>
-                </span>
-              </li>
-              <li
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "12px 16px",
-                  borderTop: "1px solid #E2E2E2",
-                }}
-              >
-                <span
-                  style={{
-                    width: "24px",
-                    height: "24px",
-                    borderRadius: "12px",
-                    background: "#05944F",
-                    color: "#FFFFFF",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
+                    <span
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        borderRadius: "12px",
+                        background: "#05944F",
+                        color: "#FFFFFF",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: "0",
+                      }}
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M5 12l5 5 9-10"></path>
+                      </svg>
+                    </span>
+                    <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: "700", color: "#000000" }}>Visit happens</span>
+                      <span style={{ fontSize: "12px", color: "#545454" }}>
+                        Check-in, tasks and check-out are recorded
+                      </span>
+                    </span>
+                  </li>
+                  <li
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      padding: "12px 16px",
+                      borderTop: "1px solid #E2E2E2",
+                    }}
                   >
-                    <path d="M5 12l5 5 9-10"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700", color: "#000000" }}>Visit happens</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Check-in, tasks and check-out are recorded</span>
-                </span>
-              </li>
-              <li
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "12px 16px",
-                  borderTop: "1px solid #E2E2E2",
-                }}
-              >
-                <span
-                  style={{
-                    width: "24px",
-                    height: "24px",
-                    borderRadius: "12px",
-                    border: "2px solid #000000",
-                    boxSizing: "border-box",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <span style={{ width: "8px", height: "8px", borderRadius: "4px", background: "#000000" }}></span>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700", color: "#000000" }}>You approve</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Or auto-approve after 24 hrs</span>
-                </span>
-              </li>
-              <li
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "12px 16px",
-                  borderTop: "1px solid #E2E2E2",
-                }}
-              >
-                <span
-                  style={{
-                    width: "24px",
-                    height: "24px",
-                    borderRadius: "12px",
-                    background: "#EEEEEE",
-                    color: "#545454",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "11px",
-                    fontWeight: "800",
-                    flexShrink: "0",
-                  }}
-                >
-                  4
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700", color: "#333333" }}>Caregiver is paid</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Your receipt appears in Payments</span>
-                </span>
-              </li>
-            </ol>
-            <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>Weekly care</h2>
-            <p style={{ margin: "0", fontSize: "15px", lineHeight: "1.6", color: "#333333", maxWidth: "680px" }}>
-              {
-                "Each week is held on Monday for that week's visits. Skip a day by 9 AM the day before and it is never charged."
-              }
-            </p>
-            <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>Paying from abroad</h2>
-            <p style={{ margin: "0", fontSize: "15px", lineHeight: "1.6", color: "#333333", maxWidth: "680px" }}>
-              Any international card works. Your bank converts from LKR; we show the LKR amount before you pay.
-            </p>
+                    <span
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        borderRadius: "12px",
+                        border: "2px solid #000000",
+                        boxSizing: "border-box",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: "0",
+                      }}
+                    >
+                      <span style={{ width: "8px", height: "8px", borderRadius: "4px", background: "#000000" }}></span>
+                    </span>
+                    <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: "700", color: "#000000" }}>You approve</span>
+                      <span style={{ fontSize: "12px", color: "#545454" }}>Or auto-approve after 24 hrs</span>
+                    </span>
+                  </li>
+                  <li
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      padding: "12px 16px",
+                      borderTop: "1px solid #E2E2E2",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        borderRadius: "12px",
+                        background: "#EEEEEE",
+                        color: "#545454",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "11px",
+                        fontWeight: "800",
+                        flexShrink: "0",
+                      }}
+                    >
+                      4
+                    </span>
+                    <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: "700", color: "#333333" }}>Caregiver is paid</span>
+                      <span style={{ fontSize: "12px", color: "#545454" }}>Your receipt appears in Payments</span>
+                    </span>
+                  </li>
+                </ol>
+                <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>Weekly care</h2>
+                <p style={{ margin: "0", fontSize: "15px", lineHeight: "1.6", color: "#333333", maxWidth: "680px" }}>
+                  {
+                    "Each week is held on Monday for that week's visits. Skip a day by 9 AM the day before and it is never charged."
+                  }
+                </p>
+                <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>Paying from abroad</h2>
+                <p style={{ margin: "0", fontSize: "15px", lineHeight: "1.6", color: "#333333", maxWidth: "680px" }}>
+                  Any international card works. Your bank converts from LKR; we show the LKR amount before you pay.
+                </p>
+              </>
+            ) : (
+              <>
+                <p style={{ margin: "0", fontSize: "16px", lineHeight: "1.6", color: "#333333", maxWidth: "680px" }}>
+                  {art.intro}
+                </p>
+                {art.sections.map((sec) => (
+                  <Fragment key={sec.h}>
+                    <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>{sec.h}</h2>
+                    <p
+                      style={{ margin: "0", fontSize: "15px", lineHeight: "1.6", color: "#333333", maxWidth: "680px" }}
+                    >
+                      {sec.p}
+                    </p>
+                  </Fragment>
+                ))}
+              </>
+            )}
             <div
               style={{
                 display: "flex",
@@ -334,6 +366,7 @@ export default function HelpArticleScreen() {
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
               <Link
                 href="/help-article"
+                onClick={() => open("refunds")}
                 style={{ display: "flex", padding: "12px 14px", fontSize: "13px", fontWeight: "600" }}
               >
                 How refunds work
@@ -341,6 +374,7 @@ export default function HelpArticleScreen() {
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "0px" }}></div>
               <Link
                 href="/help-article"
+                onClick={() => open("problem-visit")}
                 style={{ display: "flex", padding: "12px 14px", fontSize: "13px", fontWeight: "600" }}
               >
                 Problem with a visit
@@ -348,6 +382,7 @@ export default function HelpArticleScreen() {
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "0px" }}></div>
               <Link
                 href="/help-article"
+                onClick={() => open("cancel-move")}
                 style={{ display: "flex", padding: "12px 14px", fontSize: "13px", fontWeight: "600" }}
               >
                 Cancel or move a visit
@@ -355,6 +390,7 @@ export default function HelpArticleScreen() {
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "0px" }}></div>
               <Link
                 href="/help-article"
+                onClick={() => open("payment-methods")}
                 style={{ display: "flex", padding: "12px 14px", fontSize: "13px", fontWeight: "600" }}
               >
                 Payment methods

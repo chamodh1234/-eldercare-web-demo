@@ -5,6 +5,7 @@ import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -83,12 +84,17 @@ class Logic extends DCLogic {
       digest: tg("digest"),
       ruwan: seg("ruwan", ["Everything", "Visits", "Safety only"]),
       sunil: seg("sunil", ["Everything", "Visits", "Safety only"]),
+      save: () => {
+        this.props.commit();
+        toast("Notification settings saved");
+      },
+      cancel: () => this.props.discard(),
     };
   }
 }
 
 export default function NotificationSettingsScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { draft: "notificationSettings" });
   return (
     <div
       style={{
@@ -557,6 +563,7 @@ export default function NotificationSettingsScreen() {
             <div style={{ display: "flex", gap: "8px" }}>
               <Link
                 href="/notifications"
+                onClick={v.save}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -577,6 +584,7 @@ export default function NotificationSettingsScreen() {
               </Link>
               <Link
                 href="/notifications"
+                onClick={v.cancel}
                 style={{
                   height: "40px",
                   padding: "0 18px",

@@ -1,7 +1,21 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { openChat, selectCaregiver } from "@/lib/actions";
+import { dayLabel } from "@/lib/format";
+import { caregiver } from "@/lib/mock/caregivers";
+import { useDemo } from "@/lib/store";
 
 export default function CoverRequestedScreen() {
+  const demo = useDemo();
+  const who = caregiver(demo.weekly.coverBy || "mala");
+  const days = demo.weekly.cover.length ? demo.weekly.cover : ["2026-10-20", "2026-10-21", "2026-10-22"];
+  const sorted = [...days].sort();
+  const span =
+    sorted.length > 1
+      ? `${dayLabel(sorted[0]).replace(/ \w+$/, "")} – ${dayLabel(sorted[sorted.length - 1])}`
+      : dayLabel(sorted[0]);
   return (
     <div
       style={{
@@ -44,7 +58,7 @@ export default function CoverRequestedScreen() {
               />
               <span style={{ marginLeft: "-16px", border: "4px solid #FFFFFF", borderRadius: "50%", display: "flex" }}>
                 <img
-                  src="/images/mala.png"
+                  src={who.avatar}
                   alt=""
                   style={{
                     width: "60px",
@@ -67,7 +81,7 @@ export default function CoverRequestedScreen() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                {"We've asked Mala"}
+                {`We've asked ${who.first}`}
               </h1>
               <span style={{ fontSize: "15px", color: "#545454" }}>
                 She usually replies within an hour. Nirmala is back Fri 23 Oct.
@@ -141,7 +155,9 @@ export default function CoverRequestedScreen() {
                   <span style={{ width: "8px", height: "8px", borderRadius: "4px", background: "#000000" }}></span>
                 </span>
                 <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700", color: "#000000" }}>Mala accepts</span>
+                  <span
+                    style={{ fontSize: "14px", fontWeight: "700", color: "#000000" }}
+                  >{`${who.first} accepts`}</span>
                   <span style={{ fontSize: "12px", color: "#545454" }}>{"We'll tell you right away"}</span>
                 </span>
               </li>
@@ -172,8 +188,10 @@ export default function CoverRequestedScreen() {
                   3
                 </span>
                 <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700", color: "#333333" }}>Mala visits Amma</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Tue 20 – Thu 22 Oct · 9:00 – 12:00</span>
+                  <span
+                    style={{ fontSize: "14px", fontWeight: "700", color: "#333333" }}
+                  >{`${who.first} visits Amma`}</span>
+                  <span style={{ fontSize: "12px", color: "#545454" }}>{`${span} · 9:00 – 12:00`}</span>
                 </span>
               </li>
               <li
@@ -234,11 +252,12 @@ export default function CoverRequestedScreen() {
               >
                 <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"></path>
               </svg>
-              <span>{"If Mala can't, we'll suggest Priya. You're never charged for days with nobody booked."}</span>
+              <span>{`If ${who.first} can't, we'll suggest ${who.id === "priya" ? "Mala" : "Priya"}. You're never charged for days with nobody booked.`}</span>
             </div>
             <div style={{ display: "flex", gap: "10px" }}>
               <Link
                 href="/messages"
+                onClick={() => openChat(who.id)}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -255,7 +274,7 @@ export default function CoverRequestedScreen() {
                   whiteSpace: "nowrap",
                 }}
               >
-                Message Mala
+                {`Message ${who.first}`}
               </Link>
               <Link
                 href="/weekly-care"
@@ -296,7 +315,7 @@ export default function CoverRequestedScreen() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <img
-                src="/images/mala.png"
+                src={who.avatar}
                 alt=""
                 style={{
                   width: "44px",
@@ -308,7 +327,7 @@ export default function CoverRequestedScreen() {
                 }}
               />
               <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ fontSize: "15px", fontWeight: "800" }}>Mala Wickrama</span>
+                <span style={{ fontSize: "15px", fontWeight: "800" }}>{who.name}</span>
                 <span style={{ fontSize: "12px", color: "#545454" }}>4.9 ★ · cared for Amma before</span>
               </span>
               <span
@@ -341,9 +360,9 @@ export default function CoverRequestedScreen() {
               >
                 <span style={{ color: "#545454" }}>Days</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  Tue 20 – Thu 22 Oct
+                  {span}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                    3 visits · 9:00 – 12:00
+                    {`${sorted.length} visit${sorted.length === 1 ? "" : "s"} · 9:00 – 12:00`}
                   </span>
                 </span>
               </div>
@@ -381,6 +400,7 @@ export default function CoverRequestedScreen() {
             </div>
             <Link
               href="/profile"
+              onClick={() => selectCaregiver(who.id)}
               style={{
                 height: "40px",
                 padding: "0 18px",

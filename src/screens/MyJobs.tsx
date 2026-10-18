@@ -1,7 +1,27 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { mutate, useDemo } from "@/lib/store";
+
+const STATUS: Record<string, { tag: [string, string]; action: string; href: string }> = {
+  Live: { tag: ["#E6F4EC", "#05663A"], action: "Review", href: "/applicants" },
+  Draft: { tag: ["#EEEEEE", "#333333"], action: "Finish", href: "/post-job" },
+  Filled: { tag: ["#EAF0FD", "#1A4FB5"], action: "View", href: "/weekly-care" },
+  Closed: { tag: ["#EEEEEE", "#545454"], action: "Repost", href: "/post-job" },
+};
 
 export default function MyJobsScreen() {
+  const demo = useDemo();
+  const jobs = demo.jobs.map((j) => ({
+    ...j,
+    ...STATUS[j.status],
+    open: () =>
+      mutate((d) => {
+        d.ui.selectedJob = j.id;
+        if (j.status !== "Live") d.ui.postJob = { ...d.ui.postJob, title: j.title };
+      }),
+  }));
   return (
     <div
       style={{
@@ -103,177 +123,67 @@ export default function MyJobsScreen() {
               <span>Applicants</span>
               <span></span>
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(220px, 2fr) 1fr 1fr 0.8fr 120px",
-                gap: "12px",
-                alignItems: "center",
-                padding: "14px 16px",
-                borderTop: "1px solid #E2E2E2",
-                fontSize: "13px",
-              }}
-            >
-              <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ fontSize: "14px", fontWeight: "800" }}>Morning companion for Amma</span>
-                <span style={{ color: "#545454" }}>Companionship · LKR 1,200/hr</span>
-              </span>
-              <span>Mon–Sat 9–12</span>
-              <span>
-                <span
-                  style={{
-                    height: "24px",
-                    padding: "0 10px",
-                    borderRadius: "12px",
-                    background: "#E6F4EC",
-                    color: "#05663A",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Live
-                </span>
-              </span>
-              <span style={{ fontWeight: "800" }}>4 new</span>
-              <Link
-                href="/applicants"
+            {jobs.map((j) => (
+              <div
+                key={j.id}
                 style={{
-                  height: "32px",
-                  padding: "0 14px",
-                  borderRadius: "16px",
-                  background: "#EEEEEE",
-                  color: "#000000",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  display: "inline-flex",
+                  display: "grid",
+                  gridTemplateColumns: "minmax(220px, 2fr) 1fr 1fr 0.8fr 120px",
+                  gap: "12px",
                   alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  boxSizing: "border-box",
-                  whiteSpace: "nowrap",
+                  padding: "14px 16px",
+                  borderTop: "1px solid #E2E2E2",
+                  fontSize: "13px",
                 }}
               >
-                Review
-              </Link>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(220px, 2fr) 1fr 1fr 0.8fr 120px",
-                gap: "12px",
-                alignItems: "center",
-                padding: "14px 16px",
-                borderTop: "1px solid #E2E2E2",
-                fontSize: "13px",
-              }}
-            >
-              <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ fontSize: "14px", fontWeight: "800" }}>Clinic visit escort</span>
-                <span style={{ color: "#545454" }}>Errands · LKR 1,000/hr</span>
-              </span>
-              <span>Tue 20 Oct, 2–4 PM</span>
-              <span>
-                <span
+                <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontSize: "14px", fontWeight: "800" }}>{j.title}</span>
+                  <span style={{ color: "#545454" }}>{`${j.help} · ${j.rate}`}</span>
+                </span>
+                <span>{j.schedule}</span>
+                <span>
+                  <span
+                    style={{
+                      height: "24px",
+                      padding: "0 10px",
+                      borderRadius: "12px",
+                      background: j.tag[0],
+                      color: j.tag[1],
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {j.status}
+                  </span>
+                </span>
+                <span style={{ fontWeight: "800" }}>{j.applicants}</span>
+                <Link
+                  href={j.href}
+                  onClick={j.open}
                   style={{
-                    height: "24px",
-                    padding: "0 10px",
-                    borderRadius: "12px",
+                    height: "32px",
+                    padding: "0 14px",
+                    borderRadius: "16px",
                     background: "#EEEEEE",
-                    color: "#333333",
+                    color: "#000000",
+                    fontSize: "13px",
+                    fontWeight: "600",
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: "4px",
-                    fontSize: "12px",
-                    fontWeight: "700",
+                    justifyContent: "center",
+                    gap: "8px",
+                    boxSizing: "border-box",
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Draft
-                </span>
-              </span>
-              <span style={{ fontWeight: "800" }}>—</span>
-              <Link
-                href="/post-job"
-                style={{
-                  height: "32px",
-                  padding: "0 14px",
-                  borderRadius: "16px",
-                  background: "#EEEEEE",
-                  color: "#000000",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  boxSizing: "border-box",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Finish
-              </Link>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(220px, 2fr) 1fr 1fr 0.8fr 120px",
-                gap: "12px",
-                alignItems: "center",
-                padding: "14px 16px",
-                borderTop: "1px solid #E2E2E2",
-                fontSize: "13px",
-              }}
-            >
-              <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ fontSize: "14px", fontWeight: "800" }}>Weekend overnight care</span>
-                <span style={{ color: "#545454" }}>Overnight · LKR 9,000/night</span>
-              </span>
-              <span>Sat–Sun</span>
-              <span>
-                <span
-                  style={{
-                    height: "24px",
-                    padding: "0 10px",
-                    borderRadius: "12px",
-                    background: "#EAF0FD",
-                    color: "#1A4FB5",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Filled
-                </span>
-              </span>
-              <span style={{ fontWeight: "800" }}>Hired Mala</span>
-              <Link
-                href="/weekly-care"
-                style={{
-                  height: "32px",
-                  padding: "0 14px",
-                  borderRadius: "16px",
-                  background: "#EEEEEE",
-                  color: "#000000",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  boxSizing: "border-box",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                View
-              </Link>
-            </div>
+                  {j.action}
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "12px" }}>

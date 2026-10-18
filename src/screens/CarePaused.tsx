@@ -1,7 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { lkr } from "@/lib/format";
+import { useDemo } from "@/lib/store";
 
 export default function CarePausedScreen() {
+  const demo = useDemo();
+  const days: number[] = [...(demo.ui.pauseCare?.sel ?? [26, 27, 28, 29, 30, 31])].sort((a, b) => a - b);
+  const range = days.length ? (days.length === 1 ? `${days[0]} Oct` : `${days[0]} – ${days[days.length - 1]} Oct`) : "";
   return (
     <div
       style={{
@@ -105,7 +112,7 @@ export default function CarePausedScreen() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                Paused 26 – 31 Oct
+                {`Paused ${range}`}
               </h1>
               <span style={{ fontSize: "15px", lineHeight: "1.5", color: "#333333" }}>
                 {"Nirmala knows. She'll be back Mon 2 Nov at 9:00."}
@@ -123,7 +130,7 @@ export default function CarePausedScreen() {
               >
                 <span style={{ color: "#545454" }}>Paused</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  6 visits
+                  {`${days.length} visit${days.length === 1 ? "" : "s"}`}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
                     Mon 26 – Sat 31 Oct
                   </span>
@@ -175,7 +182,9 @@ export default function CarePausedScreen() {
                   <span style={{ fontSize: "14px", fontWeight: "700", color: "#05663A" }}>Not charged</span>
                   <span style={{ fontSize: "12px", color: "#333333" }}>No hold on Mon 26 Oct</span>
                 </span>
-                <span style={{ fontSize: "18px", fontWeight: "800", whiteSpace: "nowrap" }}>LKR 23,760</span>
+                <span style={{ fontSize: "18px", fontWeight: "800", whiteSpace: "nowrap" }}>
+                  {lkr(days.length * 3960)}
+                </span>
               </div>
             </div>
             <div

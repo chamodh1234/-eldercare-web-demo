@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { openChat, sendMessage } from "@/lib/actions";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -12,6 +13,11 @@ class Logic extends DCLogic {
   renderVals() {
     return { msg: this.state.msg, showMsg: () => this.setState({ msg: !this.state.msg }) };
   }
+}
+
+function quickReply(text: string) {
+  openChat("nirmala");
+  sendMessage("th-nirmala", text);
 }
 
 export default function IncomingCallScreen() {
@@ -154,6 +160,7 @@ export default function IncomingCallScreen() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                 <Link
                   href="/messages"
+                  onClick={() => quickReply("Can I call you back in 5 min?")}
                   style={{
                     height: "32px",
                     padding: "0 12px",
@@ -170,6 +177,7 @@ export default function IncomingCallScreen() {
                 </Link>
                 <Link
                   href="/messages"
+                  onClick={() => quickReply("In a meeting, please message")}
                   style={{
                     height: "32px",
                     padding: "0 12px",
@@ -186,6 +194,7 @@ export default function IncomingCallScreen() {
                 </Link>
                 <Link
                   href="/messages"
+                  onClick={() => quickReply("Is Amma okay?")}
                   style={{
                     height: "32px",
                     padding: "0 12px",

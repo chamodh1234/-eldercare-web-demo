@@ -1,7 +1,19 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { lkr } from "@/lib/format";
+import { reportVisit, visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 export default function DisputeResolvedScreen() {
+  const demo = useDemo();
+  const { v, cg } = visitView(reportVisit(demo));
+  const dispute = demo.dispute ?? { refund: 1200, reason: "Tasks not done", status: "open" };
+  const subTotal = v.hours * v.rate;
+  const refund = lkr(dispute.refund);
+  const paid = lkr(subTotal - dispute.refund);
+  const feeAmt = lkr(v.amount - subTotal);
   return (
     <div
       style={{
@@ -98,10 +110,10 @@ export default function DisputeResolvedScreen() {
             <h1
               style={{ margin: "0", fontSize: "32px", lineHeight: "1.1", fontWeight: "800", letterSpacing: "-0.025em" }}
             >
-              Sorted. LKR 1,200 is coming back
+              {dispute.refund ? `Sorted. ${refund} is coming back` : "Sorted. A free re-visit is on its way"}
             </h1>
             <span style={{ fontSize: "15px", lineHeight: "1.5", color: "#333333" }}>
-              You and Nirmala agreed. The rest of the payment has been released to her.
+              {`You and ${cg.first} agreed. The rest of the payment has been released to her.`}
             </span>
           </div>
           <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
@@ -116,9 +128,9 @@ export default function DisputeResolvedScreen() {
             >
               <span style={{ color: "#545454" }}>Refund</span>
               <span style={{ fontWeight: "700", textAlign: "right" }}>
-                LKR 1,200
+                {refund}
                 <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                  To Visa ·· 4417 · 3–5 working days
+                  {`To ${v.card} · 3–5 working days`}
                 </span>
               </span>
             </div>
@@ -132,8 +144,8 @@ export default function DisputeResolvedScreen() {
                 fontSize: "14px",
               }}
             >
-              <span style={{ color: "#545454" }}>Paid to Nirmala</span>
-              <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 2,400</span>
+              <span style={{ color: "#545454" }}>{`Paid to ${cg.first}`}</span>
+              <span style={{ fontWeight: "700", textAlign: "right" }}>{paid}</span>
             </div>
             <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
             <div
@@ -147,7 +159,7 @@ export default function DisputeResolvedScreen() {
             >
               <span style={{ color: "#545454" }}>Booking fee</span>
               <span style={{ fontWeight: "700", textAlign: "right" }}>
-                LKR 360
+                {feeAmt}
                 <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
                   Kept by Gloocan
                 </span>

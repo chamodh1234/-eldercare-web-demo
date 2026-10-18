@@ -4,6 +4,9 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { NoticeRow } from "@/components/NoticeRow";
+import { toast } from "@/components/Toaster";
+import { mutate, useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -33,6 +36,7 @@ class Logic extends DCLogic {
       };
     };
     return {
+      tab: this.state.tab,
       tabs: seg("tab", ["All", "Visits", "Payments", "Safety"]),
       push: tg("push"),
       email: tg("email"),
@@ -43,7 +47,17 @@ class Logic extends DCLogic {
 }
 
 export default function NotificationsScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { persist: "notifications" });
+  const cat = ["all", "visits", "payments", "safety"][v.tab];
+  const shown = demo.notices.filter((n) => cat === "all" || n.cat === cat);
+  const groups = { today: shown.filter((n) => n.group === "today"), week: shown.filter((n) => n.group === "week") };
+  const markAllRead = () => {
+    mutate((d) => {
+      d.notices = d.notices.map((n) => ({ ...n, unread: false }));
+    });
+    toast("All caught up");
+  };
   return (
     <div
       style={{
@@ -131,9 +145,12 @@ export default function NotificationsScreen() {
                     </Fragment>
                   ))}
                 </div>
-                <Link
-                  href="/notifications"
+                <button
+                  type="button"
+                  onClick={markAllRead}
                   style={{
+                    border: "none",
+                    fontFamily: "var(--font-figtree), sans-serif",
                     height: "32px",
                     padding: "0 14px",
                     borderRadius: "16px",
@@ -150,549 +167,72 @@ export default function NotificationsScreen() {
                   }}
                 >
                   Mark all read
-                </Link>
+                </button>
               </div>
             </div>
-            <span
-              style={{
-                fontSize: "12px",
-                fontWeight: "600",
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: "#545454",
-              }}
-            >
-              Today
-            </span>
-            <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden", marginTop: "-8px" }}>
-              <Link
-                href="/incident-alert"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
+            {groups.today.length ? (
+              <>
                 <span
                   style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#FFEFED",
-                    color: "#C11500",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: "#545454",
                   }}
                 >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 3l9 16H3z"></path>
-                    <path d="M12 10v4M12 17v.5"></path>
-                  </svg>
+                  Today
                 </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "800" }}>Incident: Amma had a fall</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>Nirmala reported it · needs a doctor today</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>10:44</span>
-                <span style={{ width: "8px", height: "8px", borderRadius: "4px", background: "#276EF1" }}></span>
-              </Link>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <Link
-                href="/extend-request"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
+                <div
+                  style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden", marginTop: "-8px" }}
+                >
+                  {groups.today.map((n, i) => (
+                    <Fragment key={n.id}>
+                      {i > 0 ? <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div> : null}
+                      <NoticeRow n={n} />
+                    </Fragment>
+                  ))}
+                </div>
+              </>
+            ) : null}
+            {groups.week.length ? (
+              <>
                 <span
                   style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#EAF0FD",
-                    color: "#1A4FB5",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: "#545454",
                   }}
                 >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect x="4" y="5" width="16" height="16" rx="2"></rect>
-                    <path d="M4 10h16M9 3v4M15 3v4"></path>
-                  </svg>
+                  This week
                 </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "800" }}>Nirmala asks to stay 1 more hour</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>Approve by 12:00 · LKR 1,320</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>11:38</span>
-                <span style={{ width: "8px", height: "8px", borderRadius: "4px", background: "#276EF1" }}></span>
-              </Link>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <Link
-                href="/caregiver-cancelled"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
+                <div
+                  style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden", marginTop: "-8px" }}
+                >
+                  {groups.week.map((n, i) => (
+                    <Fragment key={n.id}>
+                      {i > 0 ? <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div> : null}
+                      <NoticeRow n={n} />
+                    </Fragment>
+                  ))}
+                </div>
+              </>
+            ) : null}
+            {groups.today.length + groups.week.length === 0 ? (
+              <div
+                style={{
+                  border: "1px solid #E2E2E2",
+                  borderRadius: "16px",
+                  padding: "24px 16px",
+                  fontSize: "14px",
+                  color: "#545454",
+                }}
               >
-                <span
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#FFEFED",
-                    color: "#C11500",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 3l9 16H3z"></path>
-                    <path d="M12 10v4M12 17v.5"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "800" }}>{"Nirmala can't make Sat 17 Oct"}</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>Pick a stand-in or get a full refund</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>10:15</span>
-                <span style={{ width: "8px", height: "8px", borderRadius: "4px", background: "#276EF1" }}></span>
-              </Link>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <Link
-                href="/live-visit"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
-                <span
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#EAF0FD",
-                    color: "#1A4FB5",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect x="4" y="5" width="16" height="16" rx="2"></rect>
-                    <path d="M4 10h16M9 3v4M15 3v4"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "800" }}>Nirmala checked in with Amma</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>Visit code 4821 confirmed · 9:02</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>9:02</span>
-                <span style={{ width: "8px", height: "8px", borderRadius: "4px", background: "#276EF1" }}></span>
-              </Link>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <Link
-                href="/incoming-call"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
-                <span
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#FFEFED",
-                    color: "#C11500",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M5 4h3.5l1.5 4.5-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "800" }}>Missed call from Nirmala</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>In-app call · tap to see it again</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>10:40</span>
-                <span style={{ width: "8px", height: "8px", borderRadius: "4px", background: "#276EF1" }}></span>
-              </Link>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <Link
-                href="/on-the-way"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
-                <span
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#EEEEEE",
-                    color: "#000000",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M5 4h3.5l1.5 4.5-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "600" }}>Nirmala is on the way</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>Arriving about 8:58 · code 4821</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>8:41</span>
-                <span style={{ width: "8px" }}></span>
-              </Link>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <Link
-                href="/care-plan"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
-                <span
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#E6F4EC",
-                    color: "#05663A",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M5 12l5 5 9-10"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "800" }}>Nirmala saw your task for today</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>{'"Let the electrician in" · seen 6:12'}</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>6:12</span>
-                <span style={{ width: "8px", height: "8px", borderRadius: "4px", background: "#276EF1" }}></span>
-              </Link>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <Link
-                href="/account"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
-                <span
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#EEEEEE",
-                    color: "#000000",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "600" }}>Safety team replied</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>Report GL-20418 · 1 new message</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>11:20</span>
-                <span style={{ width: "8px" }}></span>
-              </Link>
-            </div>
-            <span
-              style={{
-                fontSize: "12px",
-                fontWeight: "600",
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: "#545454",
-              }}
-            >
-              This week
-            </span>
-            <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden", marginTop: "-8px" }}>
-              <Link
-                href="/time-offer"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
-                <span
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#EEEEEE",
-                    color: "#000000",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect x="4" y="5" width="16" height="16" rx="2"></rect>
-                    <path d="M4 10h16M9 3v4M15 3v4"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "600" }}>Nirmala suggested a new time</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>Sun 18 · 2:00 PM instead of 10:00</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>Fri</span>
-                <span style={{ width: "8px" }}></span>
-              </Link>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <Link
-                href="/booking-status"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
-                <span
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#E6F4EC",
-                    color: "#05663A",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M5 12l5 5 9-10"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "600" }}>Nirmala accepted Sat 17 Oct</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>9:00 – 12:00 · LKR 3,960 held</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>Mon</span>
-                <span style={{ width: "8px" }}></span>
-              </Link>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <Link
-                href="/visit-report"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
-                <span
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#EEEEEE",
-                    color: "#000000",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M6 3h8l4 4v14H6z"></path>
-                    <path d="M14 3v4h4M9 12h6M9 16h6"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "600" }}>Visit report ready to approve</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>Sat 10 Oct · LKR 3,600 to release</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>Sat</span>
-                <span style={{ width: "8px" }}></span>
-              </Link>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <Link
-                href="/payments"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
-                <span
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#E6F4EC",
-                    color: "#05663A",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect x="3" y="6" width="18" height="13" rx="2"></rect>
-                    <path d="M3 10h18M7 15h3"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "600" }}>Refund sent</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>LKR 2,640 to Visa ·· 4417</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>Thu</span>
-                <span style={{ width: "8px" }}></span>
-              </Link>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "66px" }}></div>
-              <Link
-                href="/care-circle"
-                style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px" }}
-              >
-                <span
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "18px",
-                    background: "#EEEEEE",
-                    color: "#000000",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: "0",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <circle cx="9" cy="8" r="3.5"></circle>
-                    <path d="M2.5 20c1-3.5 3.5-5 6.5-5s5.5 1.5 6.5 5"></path>
-                    <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 15c2 .7 3.2 2.3 3.5 5"></path>
-                  </svg>
-                </span>
-                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "600" }}>{"Ruwan joined Amma's care circle"}</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>He can see visits and add tasks</span>
-                </span>
-                <span style={{ fontSize: "12px", color: "#545454", whiteSpace: "nowrap" }}>Tue</span>
-                <span style={{ width: "8px" }}></span>
-              </Link>
-            </div>
+                Nothing here yet.
+              </div>
+            ) : null}
           </section>
           <aside
             style={{ flex: "1 1 280px", maxWidth: "340px", display: "flex", flexDirection: "column", gap: "12px" }}

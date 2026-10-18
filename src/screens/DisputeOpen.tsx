@@ -1,7 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { openChat, resolveDispute } from "@/lib/actions";
+import { lkr } from "@/lib/format";
+import { reportVisit, visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 export default function DisputeOpenScreen() {
+  const demo = useDemo();
+  const { v, cg, day } = visitView(reportVisit(demo));
+  const dispute = demo.dispute ?? { refund: 1200, reason: "Tasks not done", status: "open" };
+  const subTotal = v.hours * v.rate;
+  const refund = lkr(dispute.refund);
+  const paid = lkr(subTotal - dispute.refund);
+  const feeAmt = lkr(v.amount - subTotal);
   return (
     <div
       style={{
@@ -89,10 +102,12 @@ export default function DisputeOpenScreen() {
                     letterSpacing: "-0.025em",
                   }}
                 >
-                  Visit dispute · Sat 10 Oct
+                  {`Visit dispute · ${day}`}
                 </h1>
                 <span style={{ fontSize: "15px", color: "#545454" }}>
-                  You asked for LKR 1,200 back · tasks not done
+                  {dispute.refund
+                    ? `You asked for ${refund} back · ${dispute.reason.toLowerCase()}`
+                    : `You asked for a free re-visit · ${dispute.reason.toLowerCase()}`}
                 </span>
               </div>
             </div>
@@ -123,7 +138,7 @@ export default function DisputeOpenScreen() {
                   <span style={{ fontSize: "15px", fontWeight: "800" }}>{"Nirmala's offer"}</span>
                   <span style={{ fontSize: "12px", color: "#545454" }}>Sun, 9:12 AM</span>
                 </span>
-                <span style={{ fontSize: "22px", fontWeight: "800" }}>LKR 1,200</span>
+                <span style={{ fontSize: "22px", fontWeight: "800" }}>{dispute.refund ? refund : "Re-visit"}</span>
               </div>
               <span style={{ fontSize: "15px", lineHeight: "1.55", color: "#333333" }}>
                 {
@@ -143,9 +158,9 @@ export default function DisputeOpenScreen() {
               >
                 <span style={{ color: "#545454" }}>Refund to you</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  LKR 1,200
+                  {refund}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                    Visa ·· 4417 · 3–5 days
+                    {`${v.card} · 3–5 days`}
                   </span>
                 </span>
               </div>
@@ -160,7 +175,7 @@ export default function DisputeOpenScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Nirmala is paid</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 2,400</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{paid}</span>
               </div>
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
               <div
@@ -174,7 +189,7 @@ export default function DisputeOpenScreen() {
               >
                 <span style={{ color: "#545454" }}>Booking fee</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  LKR 360
+                  {feeAmt}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
                     Kept by Gloocan
                   </span>
@@ -184,6 +199,7 @@ export default function DisputeOpenScreen() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <Link
                 href="/dispute-resolved"
+                onClick={resolveDispute}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -204,6 +220,7 @@ export default function DisputeOpenScreen() {
               </Link>
               <Link
                 href="/dispute-resolved"
+                onClick={resolveDispute}
                 style={{
                   height: "40px",
                   padding: "0 18px",
@@ -224,6 +241,7 @@ export default function DisputeOpenScreen() {
               </Link>
               <Link
                 href="/messages"
+                onClick={() => openChat(cg.id)}
                 style={{
                   height: "40px",
                   padding: "0 18px",

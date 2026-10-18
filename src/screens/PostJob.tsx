@@ -4,11 +4,19 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { mutate, newId } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { k: 0, needs: ["Walking support", "Medicine reminders"], langs: ["Sinhala"] };
+    this.state = {
+      k: 0,
+      needs: ["Walking support", "Medicine reminders"],
+      langs: ["Sinhala"],
+      title: "Morning companion for Amma, 3 hrs, Mon–Sat",
+      desc: "Amma is 78 and recovering from a knee injury. We need someone patient for mornings: a short walk, tea, knee exercises and lunch.",
+    };
   }
   renderVals() {
     const radio = (key, list) =>
@@ -52,12 +60,37 @@ class Logic extends DCLogic {
         "Clinic visits",
       ]),
       langs: chips("langs", ["Sinhala", "Tamil", "English"]),
+      title: { value: this.state.title, onChange: (e) => this.setState({ title: e.target.value }) },
+      desc: { value: this.state.desc, onChange: (e) => this.setState({ desc: e.target.value }) },
+      next: (e) => {
+        if (!this.state.title.trim()) {
+          e.preventDefault();
+          toast("Give the job a title");
+        }
+      },
+      saveDraft: () => {
+        const title = this.state.title.trim() || "Untitled job";
+        mutate((d) => {
+          const existing = d.jobs.find((j) => j.status === "Draft" && j.title === title);
+          if (!existing)
+            d.jobs.push({
+              id: newId("j"),
+              title,
+              help: ["Companionship", "Personal care", "Memory care", "Overnight"][this.state.k],
+              rate: "LKR 1,200/hr",
+              schedule: "Not set yet",
+              status: "Draft",
+              applicants: "—",
+            });
+        });
+        toast("Draft saved");
+      },
     };
   }
 }
 
 export default function PostJobScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { persist: "postJob" });
   return (
     <div
       style={{
@@ -225,7 +258,7 @@ export default function PostJobScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>Job title</span>
               <input
-                defaultValue="Morning companion for Amma, 3 hrs, Mon–Sat"
+                {...v.title}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -255,12 +288,13 @@ export default function PostJobScreen() {
                   font: "500 14px var(--font-figtree), sans-serif",
                   lineHeight: "1.45",
                 }}
-                defaultValue="Amma is 78 and recovering from a knee injury. We need someone patient for mornings: a short walk, tea, knee exercises and lunch."
+                {...v.desc}
               />
             </label>
             <div style={{ display: "flex", gap: "10px" }}>
               <Link
                 href="/job-schedule"
+                onClick={v.next}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -281,6 +315,7 @@ export default function PostJobScreen() {
               </Link>
               <Link
                 href="/my-jobs"
+                onClick={v.saveDraft}
                 style={{
                   height: "40px",
                   padding: "0 18px",

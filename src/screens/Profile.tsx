@@ -4,6 +4,10 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { openChat, selectCaregiver, slotToDraft, toggleSaved } from "@/lib/actions";
+import { lkr } from "@/lib/format";
+import { caregiver, langAbbr, reviewerPhoto } from "@/lib/mock/caregivers";
+import { useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -11,13 +15,9 @@ class Logic extends DCLogic {
     this.state = { slot: 0 };
   }
   renderVals() {
-    const L = [
-      ["Sat 17", "9:00 AM"],
-      ["Mon 19", "9:00 AM"],
-      ["Tue 20", "2:00 PM"],
-      ["Sat 24", "9:00 AM"],
-    ];
-    const slots = L.map((s, i) => {
+    const { demo } = this.props;
+    const cg = caregiver(demo.selectedCaregiver);
+    const slots = cg.slots.map((s, i) => {
       const on = this.state.slot === i;
       return {
         day: s[0],
@@ -28,12 +28,44 @@ class Logic extends DCLogic {
         pick: () => this.setState({ slot: i }),
       };
     });
-    return { slots };
+    const saved = demo.saved.includes(cg.id);
+    const chosen = cg.slots[Math.min(this.state.slot, cg.slots.length - 1)];
+    return {
+      cg,
+      slots,
+      sub: `Caregiver · Colombo 05 · ★ ${cg.rating.toFixed(1)} · ${cg.reviews} reviews · ${cg.visits} visits`,
+      caredFor: cg.visitsWithAmma > 0,
+      caredLabel: `Cared for Amma · ${cg.visitsWithAmma} visits`,
+      years: `${cg.years} yrs`,
+      langs: langAbbr(cg.languages),
+      rate: lkr(cg.rate),
+      reviewsTitle: `Reviews · ★ ${cg.rating.toFixed(1)}`,
+      allReviews: `See all ${cg.reviews} reviews`,
+      reviews: cg.reviewList.slice(0, 2).map((r) => ({
+        ...r,
+        photo: reviewerPhoto(r.by),
+        meta: `${r.when} · verified visit`,
+        starsText: "★".repeat(r.stars),
+      })),
+      hasReviews: cg.reviewList.length > 0,
+      saved: saved ? "true" : "false",
+      savedLabel: saved ? "Saved caregiver" : "Save caregiver",
+      savedFill: saved ? "currentColor" : "none",
+      flipSaved: () => toggleSaved(cg.id),
+      book: () => {
+        selectCaregiver(cg.id);
+        if (chosen) slotToDraft(chosen[0], chosen[1]);
+      },
+      message: () => openChat(cg.id),
+      messageLabel: `Message ${cg.first}`,
+      bookLabel: `Book ${cg.first}`,
+    };
   }
 }
 
 export default function ProfileScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{
@@ -94,8 +126,8 @@ export default function ProfileScreen() {
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "18px" }}>
               <span style={{ position: "relative" }}>
                 <img
-                  src="/images/nirmala.png"
-                  alt="Nirmala Perera"
+                  src={v.cg.avatar}
+                  alt={v.cg.name}
                   style={{ width: "88px", height: "88px", borderRadius: "50%", objectFit: "cover", display: "block" }}
                 />
                 <span
@@ -139,11 +171,9 @@ export default function ProfileScreen() {
                     letterSpacing: "-0.03em",
                   }}
                 >
-                  Nirmala Perera
+                  {v.cg.name}
                 </h1>{" "}
-                <span style={{ fontSize: "15px", color: "#545454" }}>
-                  Caregiver · Colombo 05 · ★ 4.9 · 86 reviews · 142 visits
-                </span>{" "}
+                <span style={{ fontSize: "15px", color: "#545454" }}>{v.sub}</span>{" "}
                 <span style={{ display: "flex", flexWrap: "wrap", gap: "8px", paddingTop: "6px" }}>
                   <span
                     style={{
@@ -160,20 +190,22 @@ export default function ProfileScreen() {
                   >
                     Fully verified
                   </span>
-                  <span
-                    style={{
-                      height: "24px",
-                      padding: "0 12px",
-                      borderRadius: "12px",
-                      background: "#EEEEEE",
-                      display: "flex",
-                      alignItems: "center",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                    }}
-                  >
-                    Cared for Amma · 18 visits
-                  </span>
+                  {v.caredFor ? (
+                    <span
+                      style={{
+                        height: "24px",
+                        padding: "0 12px",
+                        borderRadius: "12px",
+                        background: "#EEEEEE",
+                        display: "flex",
+                        alignItems: "center",
+                        fontSize: "12px",
+                        fontWeight: "700",
+                      }}
+                    >
+                      {v.caredLabel}
+                    </span>
+                  ) : null}
                 </span>
               </div>
             </div>{" "}
@@ -186,7 +218,7 @@ export default function ProfileScreen() {
               }}
             >
               <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span style={{ fontSize: "18px", fontWeight: "800" }}>8 yrs</span>
+                <span style={{ fontSize: "18px", fontWeight: "800" }}>{v.years}</span>
                 <span style={{ fontSize: "12px", color: "#545454" }}>Experience</span>
               </div>{" "}
               <div
@@ -198,7 +230,7 @@ export default function ProfileScreen() {
                   borderLeft: "1px solid #E2E2E2",
                 }}
               >
-                <span style={{ fontSize: "18px", fontWeight: "800" }}>Si · En</span>
+                <span style={{ fontSize: "18px", fontWeight: "800" }}>{v.langs}</span>
                 <span style={{ fontSize: "12px", color: "#545454" }}>Languages</span>
               </div>{" "}
               <div
@@ -210,7 +242,7 @@ export default function ProfileScreen() {
                   borderLeft: "1px solid #E2E2E2",
                 }}
               >
-                <span style={{ fontSize: "18px", fontWeight: "800" }}>98%</span>
+                <span style={{ fontSize: "18px", fontWeight: "800" }}>{v.cg.onTime}</span>
                 <span style={{ fontSize: "12px", color: "#545454" }}>On time</span>
               </div>{" "}
               <div
@@ -222,73 +254,33 @@ export default function ProfileScreen() {
                   borderLeft: "1px solid #E2E2E2",
                 }}
               >
-                <span style={{ fontSize: "18px", fontWeight: "800" }}>68%</span>
+                <span style={{ fontSize: "18px", fontWeight: "800" }}>{v.cg.rebook}</span>
                 <span style={{ fontSize: "12px", color: "#545454" }}>Families rebook</span>
               </div>
             </div>{" "}
             <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>About</h2>{" "}
               <p style={{ margin: "0", fontSize: "15px", lineHeight: "1.6", color: "#333333", maxWidth: "680px" }}>
-                Patient and calm. Eight years caring for elders, including people living with dementia. I help with
-                walks, meals, medicine reminders and gentle company. I love gardening and cooking.
+                {v.cg.about}
               </p>{" "}
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                <span
-                  style={{
-                    height: "30px",
-                    padding: "0 12px",
-                    borderRadius: "15px",
-                    background: "#EEEEEE",
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                  }}
-                >
-                  Companionship
-                </span>
-                <span
-                  style={{
-                    height: "30px",
-                    padding: "0 12px",
-                    borderRadius: "15px",
-                    background: "#EEEEEE",
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                  }}
-                >
-                  Memory care
-                </span>
-                <span
-                  style={{
-                    height: "30px",
-                    padding: "0 12px",
-                    borderRadius: "15px",
-                    background: "#EEEEEE",
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                  }}
-                >
-                  Mobility support
-                </span>
-                <span
-                  style={{
-                    height: "30px",
-                    padding: "0 12px",
-                    borderRadius: "15px",
-                    background: "#EEEEEE",
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                  }}
-                >
-                  Meal prep
-                </span>
+                {v.cg.skills.map((s: string) => (
+                  <span
+                    key={s}
+                    style={{
+                      height: "30px",
+                      padding: "0 12px",
+                      borderRadius: "15px",
+                      background: "#EEEEEE",
+                      display: "flex",
+                      alignItems: "center",
+                      fontSize: "13px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {s}
+                  </span>
+                ))}
               </div>
             </section>{" "}
             <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -409,71 +401,46 @@ export default function ProfileScreen() {
             </section>{" "}
             <section style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>Reviews · ★ 4.9</h2>
+                <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>{v.reviewsTitle}</h2>
                 <Link href="/reviews" style={{ fontSize: "13px", fontWeight: "700", textDecoration: "underline" }}>
-                  See all 86 reviews
+                  {v.allReviews}
                 </Link>
               </div>{" "}
               <div
                 style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "12px" }}
               >
-                <div
-                  style={{
-                    border: "1px solid #E2E2E2",
-                    borderRadius: "14px",
-                    padding: "14px 16px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "10px",
-                  }}
-                >
-                  <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <img
-                      src="/images/ruwani.png"
-                      alt=""
-                      style={{ width: "30px", height: "30px", borderRadius: "50%", objectFit: "cover" }}
-                    />
-                    <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: "14px", fontWeight: "700" }}>Ruwani S.</span>
-                      <span style={{ fontSize: "12px", color: "#545454" }}>2 weeks ago · verified visit</span>
+                {v.reviews.map((r: any) => (
+                  <div
+                    key={r.by}
+                    style={{
+                      border: "1px solid #E2E2E2",
+                      borderRadius: "14px",
+                      padding: "14px 16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                    }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <img
+                        src={r.photo}
+                        alt=""
+                        style={{ width: "30px", height: "30px", borderRadius: "50%", objectFit: "cover" }}
+                      />
+                      <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
+                        <span style={{ fontSize: "14px", fontWeight: "700" }}>{r.by}</span>
+                        <span style={{ fontSize: "12px", color: "#545454" }}>{r.meta}</span>
+                      </span>
+                      <span style={{ fontSize: "13px", fontWeight: "700" }}>{r.starsText}</span>
                     </span>
-                    <span style={{ fontSize: "13px", fontWeight: "700" }}>★★★★★</span>
-                  </span>
-                  <span style={{ fontSize: "14px", lineHeight: "1.5", color: "#333333" }}>
-                    Patient with my father who has dementia. Always on time and sends lovely notes.
-                  </span>
-                </div>{" "}
-                <div
-                  style={{
-                    border: "1px solid #E2E2E2",
-                    borderRadius: "14px",
-                    padding: "14px 16px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "10px",
-                  }}
-                >
-                  <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <img
-                      src="/images/rohini.png"
-                      alt=""
-                      style={{ width: "30px", height: "30px", borderRadius: "50%", objectFit: "cover" }}
-                    />
-                    <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: "14px", fontWeight: "700" }}>Rohini P.</span>
-                      <span style={{ fontSize: "12px", color: "#545454" }}>September · verified visit</span>
-                    </span>
-                    <span style={{ fontSize: "13px", fontWeight: "700" }}>★★★★★</span>
-                  </span>
-                  <span style={{ fontSize: "14px", lineHeight: "1.5", color: "#333333" }}>
-                    Kind and careful. Cooked exactly how Thaththa likes it.
-                  </span>
-                </div>
+                    <span style={{ fontSize: "14px", lineHeight: "1.5", color: "#333333" }}>{r.text}</span>
+                  </div>
+                ))}
               </div>
             </section>
           </div>{" "}
           <aside
-            aria-label="Book Nirmala"
+            aria-label={v.bookLabel}
             style={{
               flex: "1 1 320px",
               maxWidth: "400px",
@@ -490,12 +457,14 @@ export default function ProfileScreen() {
           >
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
               <span style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.02em" }}>
-                LKR 1,200
+                {v.rate}
                 <span style={{ fontSize: "14px", fontWeight: "500", color: "#545454" }}>{" /hr"}</span>
               </span>
               <button
-                aria-label="Saved caregiver"
-                aria-pressed="true"
+                type="button"
+                aria-label={v.savedLabel}
+                aria-pressed={v.saved}
+                onClick={v.flipSaved}
                 style={{
                   width: "36px",
                   height: "36px",
@@ -512,7 +481,7 @@ export default function ProfileScreen() {
                   width="18"
                   height="18"
                   viewBox="0 0 24 24"
-                  fill="currentColor"
+                  fill={v.savedFill}
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinejoin="round"
@@ -563,6 +532,7 @@ export default function ProfileScreen() {
             </div>{" "}
             <Link
               href="/book"
+              onClick={v.book}
               style={{
                 height: "44px",
                 borderRadius: "22px",
@@ -579,6 +549,7 @@ export default function ProfileScreen() {
             </Link>{" "}
             <Link
               href="/messages"
+              onClick={v.message}
               style={{
                 height: "38px",
                 borderRadius: "19px",
@@ -591,7 +562,7 @@ export default function ProfileScreen() {
                 marginTop: "-6px",
               }}
             >
-              Message Nirmala
+              {v.messageLabel}
             </Link>{" "}
             <div
               style={{

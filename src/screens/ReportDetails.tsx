@@ -3,11 +3,25 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { useRef } from "react";
+import { toast } from "@/components/Toaster";
+import { REPORT_REASONS, sendReport } from "@/lib/actions";
+import { caregiver } from "@/lib/mock/caregivers";
+import { useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { chat: true, block: true, hold: true };
+    this.state = {
+      chat: true,
+      block: true,
+      hold: true,
+      visit: "Sat 10 Oct · 9:00 – 12:00",
+      when: "Sat 10 Oct, around 1 PM",
+      what: "After Saturday's visit, Amma's gold bangle was missing from her bedside drawer. It was there in the morning.",
+      files: 0,
+    };
   }
   renderVals() {
     const tg = (k) => {
@@ -19,12 +33,32 @@ class Logic extends DCLogic {
         flip: () => this.setState({ [k]: !on }),
       };
     };
-    return { chat: tg("chat"), block: tg("block"), hold: tg("hold") };
+    return {
+      chat: tg("chat"),
+      block: tg("block"),
+      hold: tg("hold"),
+      visit: { value: this.state.visit, onChange: (e) => this.setState({ visit: e.target.value }) },
+      when: { value: this.state.when, onChange: (e) => this.setState({ when: e.target.value }) },
+      what: { value: this.state.what, onChange: (e) => this.setState({ what: e.target.value }) },
+      files: this.state.files,
+      addFiles: (n) => this.setState({ files: this.state.files + n }),
+    };
   }
 }
 
 export default function ReportDetailsScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const router = useRouter();
+  const cg = caregiver(demo.selectedCaregiver);
+  const files = useRef<HTMLInputElement>(null);
+  const v = useLogic(Logic, { persist: "reportDetails" });
+  const send = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!v.what.value.trim()) return toast("Tell us what happened");
+    const reason = REPORT_REASONS[demo.ui.reportReason?.r ?? 1];
+    sendReport(cg.id, reason, v.block.pressed === "true");
+    router.push("/report-sent");
+  };
   return (
     <div
       style={{
@@ -92,7 +126,7 @@ export default function ReportDetailsScreen() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                Report Nirmala · tell us more
+                {`Report ${cg.first} · tell us more`}
               </h1>
               <span style={{ fontSize: "15px", color: "#545454" }}>Step 2 of 2 · Theft or missing items</span>
             </div>
@@ -100,7 +134,7 @@ export default function ReportDetailsScreen() {
               <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                 <span style={{ fontSize: "13px", fontWeight: "600" }}>Which visit</span>
                 <input
-                  defaultValue="Sat 10 Oct · 9:00 – 12:00"
+                  {...v.visit}
                   style={{
                     height: "44px",
                     border: "1px solid #E2E2E2",
@@ -118,7 +152,7 @@ export default function ReportDetailsScreen() {
               <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                 <span style={{ fontSize: "13px", fontWeight: "600" }}>When did you notice?</span>
                 <input
-                  defaultValue="Sat 10 Oct, around 1 PM"
+                  {...v.when}
                   style={{
                     height: "44px",
                     border: "1px solid #E2E2E2",
@@ -149,7 +183,7 @@ export default function ReportDetailsScreen() {
                   font: "500 14px var(--font-figtree), sans-serif",
                   lineHeight: "1.45",
                 }}
-                defaultValue="After Saturday's visit, Amma's gold bangle was missing from her bedside drawer. It was there in the morning."
+                {...v.what}
               />
             </label>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -233,8 +267,25 @@ export default function ReportDetailsScreen() {
                     </svg>
                   </span>
                 </span>
+                <input
+                  ref={files}
+                  type="file"
+                  accept="image/*,.pdf"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    const n = e.target.files?.length ?? 0;
+                    if (n) {
+                      v.addFiles(n);
+                      toast(`${n} file${n > 1 ? "s" : ""} attached`);
+                    }
+                    e.target.value = "";
+                  }}
+                />
                 <button
-                  aria-label="Add photo or file"
+                  type="button"
+                  onClick={() => files.current?.click()}
+                  aria-label={v.files ? `Add photo or file · ${v.files} added` : "Add photo or file"}
                   style={{
                     width: "88px",
                     height: "88px",
@@ -281,7 +332,7 @@ export default function ReportDetailsScreen() {
                 }}
               >
                 <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700" }}>Include my chat with Nirmala</span>
+                  <span style={{ fontSize: "14px", fontWeight: "700" }}>{`Include my chat with ${cg.first}`}</span>
                   <span style={{ fontSize: "13px", color: "#545454" }}>Only the safety team can read it</span>
                 </span>
                 <span
@@ -336,7 +387,7 @@ export default function ReportDetailsScreen() {
                 }}
               >
                 <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700" }}>Block Nirmala</span>
+                  <span style={{ fontSize: "14px", fontWeight: "700" }}>{`Block ${cg.first}`}</span>
                   <span style={{ fontSize: "13px", color: "#545454" }}>{"She can't message you or see your jobs"}</span>
                 </span>
                 <span
@@ -408,10 +459,11 @@ export default function ReportDetailsScreen() {
                 <rect x="5" y="11" width="14" height="9" rx="2"></rect>
                 <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
               </svg>
-              Nirmala never sees who reported or what you wrote.
+              {`${cg.first} never sees who reported or what you wrote.`}
             </span>
             <Link
               href="/report-sent"
+              onClick={send}
               style={{
                 height: "44px",
                 padding: "0 22px",

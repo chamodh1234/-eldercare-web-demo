@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { defaultCardLabel, endWeeklyCare } from "@/lib/actions";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -66,6 +67,8 @@ class Logic extends DCLogic {
       },
     ];
     const d = D[this.state.last];
+    const LAST = ["2026-10-15", "2026-10-17", "2026-10-24"];
+    const REFUND = [5940, 0, 0];
     return {
       opts: radio("last", [
         ["After today · Thu 15 Oct", "Fri and Sat this week are refunded"],
@@ -76,12 +79,13 @@ class Logic extends DCLogic {
       ...d,
       b: !d.g,
       unhappy: this.state.why.includes("Not happy with care"),
+      end: () => endWeeklyCare(LAST[this.state.last], REFUND[this.state.last], defaultCardLabel()),
     };
   }
 }
 
 export default function EndCareScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { persist: "endCare" });
   return (
     <div
       style={{
@@ -421,6 +425,7 @@ export default function EndCareScreen() {
             </Link>
             <Link
               href="/care-ended"
+              onClick={v.end}
               style={{
                 height: "44px",
                 padding: "0 22px",

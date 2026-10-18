@@ -1,7 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { dayLabel } from "@/lib/format";
+import { visitById, visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 export default function RescheduleConfirmedScreen() {
+  const demo = useDemo();
+  const move = demo.ui.lastMove ?? {
+    visitId: "v-1017",
+    from: { date: "2026-10-17", start: "9:00" },
+    to: { date: "2026-10-18", start: "2:00 PM" },
+  };
+  const { v, cg, amount } = visitView(visitById(demo, move.visitId));
+  const short = (x: { date: string; start: string }) => `${dayLabel(x.date).replace(/ \w+$/, "")} · ${x.start}`;
   return (
     <div
       style={{
@@ -105,10 +118,10 @@ export default function RescheduleConfirmedScreen() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                Moved to Sun 18 Oct · 2:00 PM
+                {`Moved to ${dayLabel(move.to.date)} · ${move.to.start}`}
               </h1>
               <span style={{ fontSize: "15px", lineHeight: "1.5", color: "#333333" }}>
-                Nirmala is booked. Your tasks moved with the visit.
+                {`${cg.first} is booked. Your tasks moved with the visit.`}
               </span>
             </div>
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
@@ -123,9 +136,9 @@ export default function RescheduleConfirmedScreen() {
               >
                 <span style={{ color: "#545454" }}>When</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  Sun 18 Oct
+                  {dayLabel(move.to.date)}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                    2:00 – 5:00 PM
+                    {`${v.start} – ${v.end}`}
                   </span>
                 </span>
               </div>
@@ -140,7 +153,7 @@ export default function RescheduleConfirmedScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Caregiver</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>Nirmala Perera</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{cg.name}</span>
               </div>
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
               <div
@@ -154,7 +167,7 @@ export default function RescheduleConfirmedScreen() {
               >
                 <span style={{ color: "#545454" }}>Price</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  LKR 3,960
+                  {amount}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
                     No change · still held
                   </span>
@@ -259,7 +272,7 @@ export default function RescheduleConfirmedScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Before</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>Sat 17 · 9:00</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{short(move.from)}</span>
               </div>
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
               <div
@@ -272,7 +285,7 @@ export default function RescheduleConfirmedScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Now</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>Sun 18 · 2:00 PM</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{short(move.to)}</span>
               </div>
             </div>
             <span style={{ fontSize: "12px", color: "#545454", lineHeight: "1.5" }}>

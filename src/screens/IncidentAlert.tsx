@@ -2,20 +2,28 @@
 
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
-import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { DCLogic, useLogic } from "@/lib/logic";
+import { openChat } from "@/lib/actions";
+import { mutate, useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
-  constructor(props: DCProps) {
-    super(props);
-    this.state = { seen: false };
-  }
   renderVals() {
-    return { notSeen: !this.state.seen, seen: this.state.seen, ack: () => this.setState({ seen: true }) };
+    const seen = this.props.demo.incidentSeen;
+    return {
+      notSeen: !seen,
+      seen,
+      ack: () =>
+        mutate((d) => {
+          d.incidentSeen = true;
+          d.notices = d.notices.map((n) => (n.href === "/incident-alert" ? { ...n, unread: false } : n));
+        }),
+    };
   }
 }
 
 export default function IncidentAlertScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{
@@ -260,6 +268,7 @@ export default function IncidentAlertScreen() {
             <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>Act now</h2>
             <Link
               href="/voice-call"
+              onClick={() => openChat("nirmala")}
               style={{
                 height: "44px",
                 padding: "0 22px",

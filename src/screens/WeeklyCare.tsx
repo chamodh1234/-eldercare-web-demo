@@ -45,7 +45,7 @@ class Logic extends DCLogic {
 }
 
 export default function WeeklyCareScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { persist: "weeklyCare" });
   return (
     <div
       style={{

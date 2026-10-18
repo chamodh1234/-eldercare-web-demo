@@ -4,6 +4,19 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/Toaster";
+import { cancelRefund, cancelVisit } from "@/lib/actions";
+import { lkr } from "@/lib/format";
+import { selectedVisit, visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
+
+const REASONS = [
+  ["Plans changed", "We no longer need this visit"],
+  ["Amma is unwell or in hospital", ""],
+  ["Found care elsewhere", ""],
+  ["Something else", ""],
+];
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -11,33 +24,44 @@ class Logic extends DCLogic {
     this.state = { r: 0 };
   }
   renderVals() {
-    const radio = (key, list) =>
-      list.map((r, i) => {
-        const on = this.state[key] === i;
-        return {
-          title: r[0],
-          note: r[1] || "",
-          checked: on ? "true" : "false",
-          sep: i === 0 ? "none" : "1px solid #E2E2E2",
-          bg: on ? "#F6F6F6" : "#FFFFFF",
-          ring: on ? "2px solid #000000" : "2px solid #A6A6A6",
-          dot: on ? "#000000" : "transparent",
-          pick: () => this.setState({ [key]: i }),
-        };
-      });
+    const { demo, router } = this.props;
+    const { v: visit, cg, day, time } = visitView(selectedVisit(demo));
+    const reasons = REASONS.map((r, i) => {
+      const on = this.state.r === i;
+      return {
+        title: r[0],
+        note: r[1] || "",
+        checked: on ? "true" : "false",
+        sep: i === 0 ? "none" : "1px solid #E2E2E2",
+        bg: on ? "#F6F6F6" : "#FFFFFF",
+        ring: on ? "2px solid #000000" : "2px solid #A6A6A6",
+        dot: on ? "#000000" : "transparent",
+        pick: () => this.setState({ r: i }),
+      };
+    });
+    const r = cancelRefund(visit);
     return {
-      reasons: radio("r", [
-        ["Plans changed", "We no longer need this visit"],
-        ["Amma is unwell or in hospital", ""],
-        ["Found care elsewhere", ""],
-        ["Something else", ""],
-      ]),
+      reasons,
+      current: `${day} · ${time} · ${cg.name}`,
+      paid: lkr(r.paid),
+      fee: lkr(r.fee),
+      feeNote: r.late ? "Within 24 hrs · 50%" : "More than 24 hrs before",
+      refundTo: `Refund to ${visit.card}`,
+      refund: lkr(r.refund),
+      cancel: (e) => {
+        e.preventDefault();
+        cancelVisit(visit.id, REASONS[this.state.r][0]);
+        toast(`Visit cancelled · ${lkr(r.refund)} refund started`);
+        router.push("/visits");
+      },
     };
   }
 }
 
 export default function CancelBookingScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { demo, router } });
   return (
     <div
       style={{
@@ -102,7 +126,7 @@ export default function CancelBookingScreen() {
           <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
             <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.02em" }}>Cancel this visit?</span>
-              <span style={{ fontSize: "14px", color: "#545454" }}>Sat 17 Oct · 9:00 – 12:00 · Nirmala Perera</span>
+              <span style={{ fontSize: "14px", color: "#545454" }}>{v.current}</span>
             </span>
             <Link
               href="/visits"
@@ -198,7 +222,7 @@ export default function CancelBookingScreen() {
               }}
             >
               <span style={{ color: "#545454" }}>You paid</span>
-              <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 3,960</span>
+              <span style={{ fontWeight: "700", textAlign: "right" }}>{v.paid}</span>
             </div>
             <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
             <div
@@ -212,9 +236,9 @@ export default function CancelBookingScreen() {
             >
               <span style={{ color: "#545454" }}>Cancel fee</span>
               <span style={{ fontWeight: "700", textAlign: "right" }}>
-                LKR 0
+                {v.fee}
                 <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                  More than 24 hrs before
+                  {v.feeNote}
                 </span>
               </span>
             </div>
@@ -222,8 +246,8 @@ export default function CancelBookingScreen() {
             <div
               style={{ display: "flex", justifyContent: "space-between", padding: "12px 16px", background: "#E6F4EC" }}
             >
-              <span style={{ fontSize: "14px", fontWeight: "700", color: "#05663A" }}>Refund to Visa ·· 4417</span>
-              <span style={{ fontSize: "18px", fontWeight: "800" }}>LKR 3,960</span>
+              <span style={{ fontSize: "14px", fontWeight: "700", color: "#05663A" }}>{v.refundTo}</span>
+              <span style={{ fontSize: "18px", fontWeight: "800" }}>{v.refund}</span>
             </div>
           </div>
           <span style={{ fontSize: "12px", color: "#545454" }}>
@@ -252,6 +276,7 @@ export default function CancelBookingScreen() {
             </Link>
             <Link
               href="/visits"
+              onClick={v.cancel}
               style={{
                 height: "44px",
                 padding: "0 22px",

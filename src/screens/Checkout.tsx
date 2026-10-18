@@ -2,40 +2,101 @@
 
 import Link from "next/link";
 import { Fragment } from "react";
-import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { DCLogic, useLogic } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { bookDraft, cardLabel, cardShort } from "@/lib/actions";
+import { addDays, dayLabel, endTime, fee, lkr } from "@/lib/format";
+import { caregiver } from "@/lib/mock/caregivers";
+import { mutate, useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
-  constructor(props: DCProps) {
-    super(props);
-    this.state = { method: 0 };
-  }
   renderVals() {
-    const M = [
-      ["VISA", "#1A1F71", "Visa ·· 4417", "Expires 08/28 · default"],
-      ["MC", "#333333", "Mastercard ·· 9012", "Sampath Bank · expires 01/27"],
-      ["INTL", "#545454", "Card from abroad", "Pay in AUD, GBP or USD · we convert"],
+    const { demo, router } = this.props;
+    const d = demo.draft;
+    const cg = caregiver(d.caregiverId);
+    const cards = demo.cards.map((c) => ({
+      id: c.id,
+      logo: c.brand,
+      logoBg: c.brand === "VISA" ? "#1A1F71" : "#333333",
+      title: cardLabel(c),
+      note: c.id === demo.defaultCard ? `Expires ${c.expiry} · default` : `${c.bank} · expires ${c.expiry}`,
+      label: cardShort(c),
+    }));
+    const all = [
+      ...cards,
+      {
+        id: "intl",
+        logo: "INTL",
+        logoBg: "#545454",
+        title: "Card from abroad",
+        note: "Pay in AUD, GBP or USD · we convert",
+        label: "Card from abroad",
+      },
     ];
-    const methods = M.map((m, i) => {
-      const on = this.state.method === i;
+    const current = all.find((m) => m.id === demo.checkoutCard) ?? all[0];
+    const methods = all.map((m, i) => {
+      const on = m.id === current.id;
       return {
-        logo: m[0],
-        logoBg: m[1],
-        title: m[2],
-        note: m[3],
+        ...m,
         checked: on ? "true" : "false",
         sep: i === 0 ? "none" : "1px solid #E2E2E2",
         bg: on ? "#F6F6F6" : "#FFFFFF",
         ring: on ? "2px solid #000000" : "2px solid #A6A6A6",
         dot: on ? "#000000" : "transparent",
-        pick: () => this.setState({ method: i }),
+        pick: () =>
+          mutate((s) => {
+            s.checkoutCard = m.id;
+          }),
       };
     });
-    return { methods };
+    const visits = d.weekly ? Math.max(1, d.weekdays.length) : 1;
+    const sub = d.hours * cg.rate * visits;
+    const f = fee(sub);
+    const promo = demo.promo;
+    const total = sub + f - (promo?.amount ?? 0);
+    return {
+      cg,
+      methods,
+      title: `${d.help} with ${cg.first}`,
+      when: (d.weekly ? "Weekly from " : "") + dayLabel(d.date),
+      time: `${d.start} – ${endTime(d.start, d.hours)}`,
+      tasks: d.note.trim() ? "Routine + 1 extra" : "Routine",
+      line: `${d.hours} hrs × ${lkr(cg.rate)}` + (visits > 1 ? ` × ${visits}` : ""),
+      sub: lkr(sub),
+      fee: lkr(f),
+      total: lkr(total),
+      payLabel: promo ? `Pay ${lkr(total)} & send request` : "Pay & send request",
+      released: `Released back if ${cg.first} declines.`,
+      thenPaid: `Then ${cg.first} is paid. Problem? It stays on hold.`,
+      paidAfter: `Paid to ${cg.first} after you approve`,
+      cancelUntil:
+        `Free to cancel until ${dayLabel(addDays(d.date, -1))}, ${d.start} AM. Within 24 hours you get 50% back. By paying you agree to the `.replace(
+          " PM AM",
+          " PM",
+        ),
+      hasPromo: !!promo,
+      noPromo: !promo,
+      promoCode: promo?.code ?? "",
+      promoAmount: promo ? lkr(-promo.amount) : "",
+      promoApplied: promo ? `Code ${promo.code} applied` : "",
+      promoNote: promo ? `Gloocan pays the ${lkr(promo.amount)} discount` : "",
+      removePromo: () =>
+        mutate((s) => {
+          s.promo = null;
+        }),
+      pay: (e) => {
+        e.preventDefault();
+        bookDraft(current.label);
+        router.push("/confirmed");
+      },
+    };
   }
 }
 
 export default function CheckoutScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { demo, router } });
   return (
     <div
       style={{
@@ -270,7 +331,7 @@ export default function CheckoutScreen() {
               ))}
             </div>{" "}
             <Link
-              href="/checkout"
+              href="/payment-methods"
               style={{
                 alignSelf: "flex-start",
                 height: "36px",
@@ -314,9 +375,7 @@ export default function CheckoutScreen() {
               >
                 <span style={{ fontSize: "12px", fontWeight: "800", color: "#545454" }}>1 · NOW</span>
                 <span style={{ fontSize: "14px", fontWeight: "700" }}>Held on your card</span>
-                <span style={{ fontSize: "13px", color: "#545454", lineHeight: "1.45" }}>
-                  Released back if Nirmala declines.
-                </span>
+                <span style={{ fontSize: "13px", color: "#545454", lineHeight: "1.45" }}>{v.released}</span>
               </div>{" "}
               <div
                 style={{
@@ -346,14 +405,12 @@ export default function CheckoutScreen() {
               >
                 <span style={{ fontSize: "12px", fontWeight: "800", color: "#545454" }}>3 · AFTER</span>
                 <span style={{ fontSize: "14px", fontWeight: "700" }}>You approve</span>
-                <span style={{ fontSize: "13px", color: "#545454", lineHeight: "1.45" }}>
-                  Then Nirmala is paid. Problem? It stays on hold.
-                </span>
+                <span style={{ fontSize: "13px", color: "#545454", lineHeight: "1.45" }}>{v.thenPaid}</span>
               </div>
             </div>
           </section>{" "}
           <p style={{ margin: "0", fontSize: "13px", lineHeight: "1.55", color: "#545454", maxWidth: "640px" }}>
-            {"Free to cancel until Fri 16 Oct, 9:00 AM. Within 24 hours you get 50% back. By paying you agree to the "}
+            {v.cancelUntil}
             <Link href="/" style={{ textDecoration: "underline", color: "#000000" }}>
               booking terms
             </Link>
@@ -378,12 +435,12 @@ export default function CheckoutScreen() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <img
-              src="/images/nirmala.png"
+              src={v.cg.avatar}
               alt=""
               style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }}
             />
             <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              <span style={{ fontSize: "15px", fontWeight: "800" }}>Companionship with Nirmala</span>
+              <span style={{ fontSize: "15px", fontWeight: "800" }}>{v.title}</span>
               <span style={{ fontSize: "12px", color: "#545454" }}>For Amma · Colombo 05</span>
             </span>
           </div>{" "}
@@ -391,27 +448,62 @@ export default function CheckoutScreen() {
             <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", fontSize: "14px" }}>
               <span style={{ color: "#545454" }}>When</span>
               <span style={{ fontWeight: "700", textAlign: "right" }}>
-                Sat 17 Oct
+                {v.when}
                 <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                  9:00 – 12:00
+                  {v.time}
                 </span>
               </span>
             </div>{" "}
             <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>{" "}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", fontSize: "14px" }}>
               <span style={{ color: "#545454" }}>Tasks</span>
-              <span style={{ fontWeight: "700", textAlign: "right" }}>Routine + 1 extra</span>
+              <span style={{ fontWeight: "700", textAlign: "right" }}>{v.tasks}</span>
             </div>{" "}
             <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>{" "}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", fontSize: "14px" }}>
-              <span style={{ color: "#545454" }}>3 hrs × LKR 1,200</span>
-              <span style={{ fontWeight: "700" }}>LKR 3,600</span>
+              <span style={{ color: "#545454" }}>{v.line}</span>
+              <span style={{ fontWeight: "700" }}>{v.sub}</span>
             </div>{" "}
             <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>{" "}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", fontSize: "14px" }}>
               <span style={{ color: "#545454" }}>{"Booking & safety fee"}</span>
-              <span style={{ fontWeight: "700" }}>LKR 360</span>
+              <span style={{ fontWeight: "700" }}>{v.fee}</span>
             </div>{" "}
+            {v.hasPromo ? (
+              <>
+                <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>{" "}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "12px 14px",
+                    fontSize: "14px",
+                  }}
+                >
+                  <span
+                    style={{ display: "flex", alignItems: "center", gap: "6px", color: "#05663A", fontWeight: "700" }}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M3 12V4h8l10 10-8 8z"></path>
+                      <circle cx="7.5" cy="8.5" r="1.5"></circle>
+                    </svg>
+                    {v.promoCode}
+                  </span>
+                  <span style={{ fontWeight: "700", color: "#05663A" }}>{v.promoAmount}</span>
+                </div>{" "}
+              </>
+            ) : null}
             <div style={{ height: "1px", background: "#E2E2E2" }}></div>{" "}
             <div
               style={{
@@ -424,19 +516,73 @@ export default function CheckoutScreen() {
             >
               <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                 <span style={{ fontSize: "14px", fontWeight: "700", color: "#1A4FB5" }}>Held in escrow</span>
-                <span style={{ fontSize: "12px", color: "#333333" }}>Paid to Nirmala after you approve</span>
+                <span style={{ fontSize: "12px", color: "#333333" }}>{v.paidAfter}</span>
               </span>
-              <span style={{ fontSize: "20px", fontWeight: "800" }}>LKR 3,960</span>
+              <span style={{ fontSize: "20px", fontWeight: "800", whiteSpace: "nowrap" }}>{v.total}</span>
             </div>
           </div>{" "}
-          <Link
-            href="/add-promo"
-            style={{ fontSize: "13px", fontWeight: "600", color: "#545454", textDecoration: "underline" }}
-          >
-            Add promo or referral code
-          </Link>{" "}
+          {v.noPromo ? (
+            <Link
+              href="/add-promo"
+              style={{ fontSize: "13px", fontWeight: "600", color: "#545454", textDecoration: "underline" }}
+            >
+              Add promo or referral code
+            </Link>
+          ) : null}
+          {v.hasPromo ? (
+            <>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  borderRadius: "12px",
+                  background: "#E6F4EC",
+                  padding: "10px 12px",
+                }}
+              >
+                <span style={{ color: "#05663A", display: "flex" }}>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 12V4h8l10 10-8 8z"></path>
+                    <circle cx="7.5" cy="8.5" r="1.5"></circle>
+                  </svg>
+                </span>
+                <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "1px" }}>
+                  <span style={{ fontSize: "13px", fontWeight: "700", color: "#05663A" }}>{v.promoApplied}</span>
+                  <span style={{ fontSize: "12px", color: "#333333" }}>{v.promoNote}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={v.removePromo}
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: "700",
+                    textDecoration: "underline",
+                    border: "none",
+                    background: "none",
+                    padding: "0",
+                    color: "#000000",
+                    fontFamily: "var(--font-figtree), sans-serif",
+                  }}
+                >
+                  Remove
+                </button>
+              </div>{" "}
+            </>
+          ) : null}
           <Link
             href="/confirmed"
+            onClick={v.pay}
             style={{
               height: "44px",
               borderRadius: "22px",
@@ -449,7 +595,7 @@ export default function CheckoutScreen() {
               fontWeight: "700",
             }}
           >
-            {"Pay & send request"}
+            {v.payLabel}
           </Link>{" "}
           <span
             style={{
