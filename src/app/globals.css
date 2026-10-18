@@ -1,0 +1,50 @@
+:root {
+  --bg: #ffffff;
+  --ink: #000000;
+  --muted: #545454;
+  --line: #e2e2e2;
+  --chip: #eeeeee;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-figtree), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  color: inherit;
+  opacity: 0.85;
+}
+
+button {
+  cursor: pointer;
+}
+
+img {
+  max-width: 100%;
+}
+
+/* Phone: rows directly inside a dialog (mostly button footers) wrap instead of squeezing. */
+@media (max-width: 560px) {
+  [role="dialog"] > div {
+    flex-wrap: wrap;
+  }
+}
