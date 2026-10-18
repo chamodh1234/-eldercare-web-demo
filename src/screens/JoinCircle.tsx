@@ -1,6 +1,21 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "@/components/Toaster";
+import { mutate } from "@/lib/store";
 
 export default function JoinCircleScreen() {
+  const [phone, setPhone] = useState("412 555 018");
+  const join = (e: React.MouseEvent) => {
+    if (phone.replace(/\D/g, "").length < 8) {
+      e.preventDefault();
+      return toast("Enter your mobile number");
+    }
+    mutate((d) => {
+      d.ui.loginPhone = phone.trim();
+    });
+  };
   return (
     <div
       style={{
@@ -298,7 +313,9 @@ export default function JoinCircleScreen() {
                   AU +61
                 </span>
                 <input
-                  defaultValue="412 555 018"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   style={{
                     flex: "1",
                     minWidth: "0",
@@ -313,6 +330,7 @@ export default function JoinCircleScreen() {
             </label>
             <Link
               href="/otp"
+              onClick={join}
               style={{
                 height: "44px",
                 padding: "0 22px",

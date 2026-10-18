@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { mutate, useDemo } from "@/lib/store";
 
 export default function SwitchPersonScreen() {
+  const demo = useDemo();
+  const others = demo.people.filter((p) => p.id !== "amma");
   return (
     <div
       style={{
@@ -138,34 +143,44 @@ export default function SwitchPersonScreen() {
               </svg>
             </span>
           </Link>
-          <Link
-            href="/care-profile"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              padding: "10px 12px",
-              borderRadius: "12px",
-              background: "transparent",
-            }}
-          >
-            <img
-              src="/images/appachchi.png"
-              alt=""
+          {others.map((p) => (
+            <Link
+              key={p.id}
+              href="/care-profile"
+              onClick={() =>
+                mutate((d) => {
+                  d.activePerson = p.id;
+                })
+              }
               style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                objectFit: "cover",
-                display: "block",
-                flexShrink: "0",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "10px 12px",
+                borderRadius: "12px",
+                background: "transparent",
               }}
-            />
-            <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-              <span style={{ fontSize: "14px", fontWeight: "700" }}>Appachchi · Lionel F., 82</span>
-              <span style={{ fontSize: "12px", color: "#545454" }}>No visits yet · profile 80% done</span>
-            </span>
-          </Link>
+            >
+              <img
+                src={p.avatar}
+                alt=""
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  display: "block",
+                  flexShrink: "0",
+                }}
+              />
+              <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span
+                  style={{ fontSize: "14px", fontWeight: "700" }}
+                >{`${p.call} · ${p.name.split(" ")[0]}, ${p.age}`}</span>
+                <span style={{ fontSize: "12px", color: "#545454" }}>{p.note}</span>
+              </span>
+            </Link>
+          ))}
           <div style={{ height: "1px", background: "#E2E2E2", margin: "6px 0" }}></div>
           <Link
             href="/add-person"

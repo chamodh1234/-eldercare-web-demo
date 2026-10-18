@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment } from "react";
+import { Fragment, useRef } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
-import { useRef } from "react";
 import { sendMessage } from "@/lib/actions";
 import { nowTime } from "@/lib/format";
 import { mutate, useDemo } from "@/lib/store";

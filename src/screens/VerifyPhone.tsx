@@ -1,8 +1,29 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { CodeInput } from "@/components/CodeInput";
+import { toast } from "@/components/Toaster";
+import { mutate, useDemo } from "@/lib/store";
 
 export default function VerifyPhoneScreen() {
+  const demo = useDemo();
+  const router = useRouter();
+  const [code, setCode] = useState("4827");
+  const next = demo.ui.newPhone ?? "+94 71 238 5590";
+  const verify = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (code.length < 6) return toast("Enter all 6 digits");
+    mutate((d) => {
+      d.account.phone = next;
+      delete d.ui.newPhone;
+    });
+    toast("Mobile number changed");
+    router.push("/security");
+  };
   return (
     <div
       style={{
@@ -79,7 +100,7 @@ export default function VerifyPhoneScreen() {
           <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
             <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.02em" }}>
-                Enter the code sent to +94 71 238 5590
+                {`Enter the code sent to ${next}`}
               </span>
               <span style={{ fontSize: "14px", color: "#545454" }}>Step 2 of 2 · current number verified</span>
             </span>
@@ -111,88 +132,7 @@ export default function VerifyPhoneScreen() {
               </svg>
             </Link>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: "8px" }}>
-            <span
-              style={{
-                height: "56px",
-                borderRadius: "12px",
-                border: "1px solid #E2E2E2",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "22px",
-                fontWeight: "800",
-              }}
-            >
-              4
-            </span>
-            <span
-              style={{
-                height: "56px",
-                borderRadius: "12px",
-                border: "1px solid #E2E2E2",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "22px",
-                fontWeight: "800",
-              }}
-            >
-              8
-            </span>
-            <span
-              style={{
-                height: "56px",
-                borderRadius: "12px",
-                border: "1px solid #E2E2E2",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "22px",
-                fontWeight: "800",
-              }}
-            >
-              2
-            </span>
-            <span
-              style={{
-                height: "56px",
-                borderRadius: "12px",
-                border: "1px solid #E2E2E2",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "22px",
-                fontWeight: "800",
-              }}
-            >
-              7
-            </span>
-            <span
-              style={{
-                height: "56px",
-                borderRadius: "12px",
-                border: "2px solid #000000",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "22px",
-                fontWeight: "800",
-              }}
-            ></span>
-            <span
-              style={{
-                height: "56px",
-                borderRadius: "12px",
-                border: "1px solid #E2E2E2",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "22px",
-                fontWeight: "800",
-              }}
-            ></span>
-          </div>
+          <CodeInput value={code} onChange={setCode} />
           <span style={{ fontSize: "13px", color: "#545454" }}>
             {"Didn't get it? "}
             <b style={{ color: "#000000" }}>Resend in 0:42</b>
@@ -248,6 +188,7 @@ export default function VerifyPhoneScreen() {
             </Link>
             <Link
               href="/security"
+              onClick={verify}
               style={{
                 height: "44px",
                 padding: "0 22px",

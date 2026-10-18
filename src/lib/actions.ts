@@ -16,6 +16,8 @@ export function logOut() {
 export function logIn() {
   mutate((d) => {
     d.session.loggedIn = true;
+    // Logging back in within 30 days cancels a scheduled deletion.
+    delete d.ui.deleteScheduled;
   });
 }
 
@@ -130,8 +132,7 @@ export function bookDraft(method: string): string {
 
 export const cardLabel = (c: { brand: string; last4: string }) =>
   `${c.brand === "VISA" ? "Visa" : "Mastercard"} ·· ${c.last4}`;
-export const cardShort = (c: { brand: string; last4: string }) =>
-  `${c.brand === "VISA" ? "Visa" : "MC"} ·· ${c.last4}`;
+export const cardShort = (c: { brand: string; last4: string }) => `${c.brand === "VISA" ? "Visa" : "MC"} ·· ${c.last4}`;
 
 /** Moves a visit to a new day and time, and remembers the move for the confirmation screen. */
 export function moveVisit(visitId: string, date: string, start: string, message = "") {
@@ -377,4 +378,57 @@ export function defaultCardLabel() {
   const s = getState();
   const c = s.cards.find((x) => x.id === s.defaultCard) ?? s.cards[0];
   return c ? cardShort(c) : "Card from abroad";
+}
+
+/** Ends weekly care after the given day: later weekly visits are cancelled and any refund recorded. */
+export function endWeeklyCare(lastDay: string, refund: number, method: string) {
+  mutate((d) => {
+    d.weekly.status = "ended";
+    d.visits.forEach((v) => {
+      if (v.weekly && v.date > lastDay && v.status !== "cancelled") {
+        v.status = "cancelled";
+        v.cancelReason = "Weekly care ended";
+      }
+    });
+    if (refund > 0)
+      d.payments.unshift({
+        id: newId("p"),
+        date: shortDate(TODAY),
+        what: "Weekly care ended · refund",
+        who: "Nirmala P.",
+        method,
+        amount: -refund,
+        status: "Refunded",
+      });
+  });
+}
+
+export const REPORT_REASONS = [
+  "Rough handling or neglect",
+  "Theft or missing items",
+  "Rude, threatening or harassing",
+  "Asked to pay outside the app",
+  "No-show or left early",
+  "Not the person on the profile",
+  "Something else",
+];
+
+export function blockCaregiver(caregiverId: string) {
+  mutate((d) => {
+    if (!d.blocked.some((b) => b.id === caregiverId))
+      d.blocked.push({ id: caregiverId, when: shortDate(TODAY), from: "from a report" });
+    d.saved = d.saved.filter((x) => x !== caregiverId);
+  });
+}
+
+/** Files a safety report about a caregiver. Returns its reference. */
+export function sendReport(caregiverId: string, reason: string, block: boolean) {
+  const ref = `GL-${20419 + getState().reports.length}`;
+  mutate((d) => {
+    d.reports.unshift({ id: newId("r"), ref, reason, caregiverId, sent: `today ${nowTime()}`, status: "Under review" });
+    d.ui.lastReport = { ref, block };
+    d.safetyChat = [];
+  });
+  if (block) blockCaregiver(caregiverId);
+  return ref;
 }

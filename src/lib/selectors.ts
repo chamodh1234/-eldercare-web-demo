@@ -100,3 +100,55 @@ export const reportVisit = (s: DemoState) => {
   const sel = visitById(s, s.selectedVisit);
   return PAST.includes(sel.status) ? sel : visitById(s, "v-1010");
 };
+
+const KINDS = ["Companionship", "Personal care", "Memory care", "Overnight / live-in"];
+const LENGTHS = ["2 weeks", "4 weeks", "Ongoing"];
+const RATES = [1000, 1200, 1400];
+const WEEK = ["M", "T", "W", "Th", "F", "Sa", "Su"];
+const WEEK_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** "Mon–Sat" for consecutive days, else "Mon, Wed, Fri". */
+const dayRange = (days: string[]) => {
+  const idx = WEEK.map((w, i) => (days.includes(w) ? i : -1)).filter((i) => i >= 0);
+  if (!idx.length) return "No days";
+  const consecutive = idx.every((d, i) => i === 0 || d === idx[i - 1] + 1);
+  return consecutive && idx.length > 2
+    ? `${WEEK_NAMES[idx[0]]}–${WEEK_NAMES[idx[idx.length - 1]]}`
+    : idx.map((i) => WEEK_NAMES[i]).join(", ");
+};
+
+/** The job being posted, from the Post a job and Schedule steps (design defaults until changed). */
+export function jobDraft(s: DemoState) {
+  const p = {
+    k: 0,
+    needs: ["Walking support", "Medicine reminders"],
+    langs: ["Sinhala"],
+    title: "Morning companion for Amma, 3 hrs, Mon–Sat",
+    desc: "Amma is 78 and recovering from a knee injury. We need someone patient for mornings: a short walk, tea, knee exercises and lunch.",
+    ...s.ui.postJob,
+  };
+  const sc = {
+    days: ["M", "T", "W", "Th", "F", "Sa"],
+    l: 1,
+    r: 1,
+    start: "Mon 12 Oct",
+    from: "9:00 AM",
+    to: "12:00 PM",
+    ...s.ui.jobSchedule,
+  };
+  const rate = RATES[sc.r];
+  const days = dayRange(sc.days);
+  const short = (t: string) => t.replace(/:00/, "").replace(/\s*(AM|PM)/, "");
+  return {
+    ...p,
+    ...sc,
+    kind: KINDS[p.k],
+    length: LENGTHS[sc.l],
+    rate,
+    rateLabel: `${lkr(rate)} / hr`,
+    weekly: lkr(Math.round(sc.days.length * 3 * rate * 1.1)),
+    when: `${days} · ${sc.from.replace(" AM", "")} – ${sc.to.replace(" PM", "").replace("12:00", "12:00")}`,
+    schedule: `${days} ${short(sc.from)}–${short(sc.to)}`,
+    tags: [KINDS[p.k], ...p.needs, ...p.langs],
+  };
+}

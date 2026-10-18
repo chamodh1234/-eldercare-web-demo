@@ -5,11 +5,13 @@ import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { openChat, selectCaregiver, toggleSaved } from "@/lib/actions";
+import { useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { saved: ["n", "s"] };
+    this.state = {};
   }
   renderVals() {
     const P = [
@@ -46,8 +48,11 @@ class Logic extends DCLogic {
         ok: true,
       },
     ];
+    const ID = { n: "nirmala", s: "shanthi", m: "mala", p: "priya" };
+    const saved = this.props.demo.saved;
+    const isSaved = (p) => saved.includes(ID[p.id]);
     const card = (p) => {
-      const on = this.state.saved.includes(p.id);
+      const on = isSaved(p);
       return {
         ...p,
         fill: on ? "#000000" : "transparent",
@@ -55,18 +60,20 @@ class Logic extends DCLogic {
         label: on ? "Remove from saved" : "Save",
         fBg: p.ok ? "#E6F4EC" : "#EEEEEE",
         fFg: p.ok ? "#05663A" : "#545454",
-        flip: () =>
-          this.setState({ saved: on ? this.state.saved.filter((x) => x !== p.id) : [...this.state.saved, p.id] }),
+        flip: () => toggleSaved(ID[p.id]),
+        message: () => openChat(ID[p.id]),
+        rebook: () => selectCaregiver(ID[p.id]),
       };
     };
-    const saved = P.filter((p) => this.state.saved.includes(p.id)).map(card);
-    const past = P.filter((p) => !this.state.saved.includes(p.id)).map(card);
-    return { saved, past, n: saved.length, hasPast: past.length > 0 };
+    const savedCards = P.filter(isSaved).map(card);
+    const past = P.filter((p) => !isSaved(p)).map(card);
+    return { saved: savedCards, past, n: savedCards.length, hasPast: past.length > 0 };
   }
 }
 
 export default function SavedCaregiversScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{
@@ -196,6 +203,7 @@ export default function SavedCaregiversScreen() {
                       <span style={{ display: "flex", gap: "6px" }}>
                         <Link
                           href="/messages"
+                          onClick={p.message}
                           style={{
                             height: "32px",
                             padding: "0 14px",
@@ -216,6 +224,7 @@ export default function SavedCaregiversScreen() {
                         </Link>
                         <Link
                           href="/rebook"
+                          onClick={p.rebook}
                           style={{
                             height: "32px",
                             padding: "0 14px",
@@ -336,6 +345,7 @@ export default function SavedCaregiversScreen() {
                             <span style={{ display: "flex", gap: "6px" }}>
                               <Link
                                 href="/messages"
+                                onClick={p.message}
                                 style={{
                                   height: "32px",
                                   padding: "0 14px",
@@ -356,6 +366,7 @@ export default function SavedCaregiversScreen() {
                               </Link>
                               <Link
                                 href="/rebook"
+                                onClick={p.rebook}
                                 style={{
                                   height: "32px",
                                   padding: "0 14px",

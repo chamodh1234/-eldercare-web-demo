@@ -5,11 +5,20 @@ import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { needs: ["Walking support", "Memory support", "Diabetic meals"], langs: ["Sinhala", "English"] };
+    this.state = {
+      needs: ["Walking support", "Memory support", "Diabetic meals"],
+      langs: ["Sinhala", "English"],
+      notes: "Hold her left arm on the steps. Likes old Sinhala songs. Gets tired after long walks.",
+      contacts: [],
+      adding: false,
+      cName: "",
+      cPhone: "",
+    };
   }
   renderVals() {
     const chips = (key, labels) =>
@@ -34,12 +43,34 @@ class Logic extends DCLogic {
         "Fall risk",
       ]),
       langs: chips("langs", ["Sinhala", "Tamil", "English"]),
+      notes: this.state.notes,
+      setNotes: (e) => this.setState({ notes: e.target.value }),
+      contacts: this.state.contacts,
+      adding: this.state.adding,
+      openAdd: () => this.setState({ adding: true }),
+      cName: { value: this.state.cName, onChange: (e) => this.setState({ cName: e.target.value }) },
+      cPhone: { value: this.state.cPhone, onChange: (e) => this.setState({ cPhone: e.target.value }) },
+      addContact: (e) => {
+        e.preventDefault();
+        if (!this.state.cName.trim() || !this.state.cPhone.trim()) return toast("Add a name and a phone number");
+        this.setState({
+          contacts: [...this.state.contacts, { name: this.state.cName.trim(), phone: this.state.cPhone.trim() }],
+          adding: false,
+          cName: "",
+          cPhone: "",
+        });
+      },
+      removeContact: (i) => () => this.setState({ contacts: this.state.contacts.filter((_, j) => j !== i) }),
+      save: (e) => {
+        e.preventDefault();
+        toast("Care profile saved · caregivers see the changes");
+      },
     };
   }
 }
 
 export default function CareProfileScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { persist: "careProfile" });
   return (
     <div
       style={{
@@ -315,7 +346,8 @@ export default function CareProfileScreen() {
                           font: "500 14px var(--font-figtree), sans-serif",
                           lineHeight: "1.45",
                         }}
-                        defaultValue="Hold her left arm on the steps. Likes old Sinhala songs. Gets tired after long walks."
+                        value={v.notes}
+                        onChange={v.setNotes}
                       />
                     </label>
                   </div>
@@ -427,9 +459,97 @@ export default function CareProfileScreen() {
                       <span style={{ fontSize: "12px", color: "#545454" }}>+94 11 ••• 8890</span>
                     </span>
                   </div>
+                  {v.contacts.map((c: any, i: number) => (
+                    <Fragment key={i}>
+                      <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "64px" }}></div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px" }}>
+                        <span
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "18px",
+                            background: "#EEEEEE",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "14px",
+                            fontWeight: "800",
+                            flexShrink: "0",
+                          }}
+                        >
+                          {c.name[0]}
+                        </span>
+                        <span style={{ flex: "1", display: "flex", flexDirection: "column" }}>
+                          <span style={{ fontSize: "14px", fontWeight: "700" }}>{c.name}</span>
+                          <span style={{ fontSize: "12px", color: "#545454" }}>{c.phone}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={v.removeContact(i)}
+                          style={{
+                            border: "none",
+                            background: "none",
+                            color: "#C11500",
+                            font: "600 12px var(--font-figtree), sans-serif",
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </Fragment>
+                  ))}
                 </div>
+                {v.adding ? (
+                  <form onSubmit={v.addContact} style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    <input
+                      aria-label="Contact name and relation"
+                      placeholder="Name · relation"
+                      {...v.cName}
+                      style={{
+                        flex: "1 1 160px",
+                        height: "40px",
+                        border: "1px solid #E2E2E2",
+                        borderRadius: "12px",
+                        padding: "0 12px",
+                        font: "500 14px var(--font-figtree), sans-serif",
+                      }}
+                    />
+                    <input
+                      aria-label="Contact phone"
+                      placeholder="Phone"
+                      type="tel"
+                      {...v.cPhone}
+                      style={{
+                        flex: "1 1 140px",
+                        height: "40px",
+                        border: "1px solid #E2E2E2",
+                        borderRadius: "12px",
+                        padding: "0 12px",
+                        font: "500 14px var(--font-figtree), sans-serif",
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      style={{
+                        height: "40px",
+                        padding: "0 18px",
+                        borderRadius: "20px",
+                        border: "none",
+                        background: "#000000",
+                        color: "#FFFFFF",
+                        font: "700 14px var(--font-figtree), sans-serif",
+                      }}
+                    >
+                      Add
+                    </button>
+                  </form>
+                ) : null}
                 <Link
                   href="/care-profile"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    v.openAdd();
+                  }}
                   style={{
                     height: "40px",
                     padding: "0 18px",
@@ -495,6 +615,7 @@ export default function CareProfileScreen() {
             <div style={{ display: "flex", gap: "10px" }}>
               <Link
                 href="/care-profile"
+                onClick={v.save}
                 style={{
                   height: "44px",
                   padding: "0 22px",

@@ -4,6 +4,9 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { draftFor, selectCaregiver } from "@/lib/actions";
+import { mutate } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -33,6 +36,19 @@ class Logic extends DCLogic {
       ]),
       cta: ["Hire Mala", "Book trial visit", "Tell Mala"][this.state.o],
       href: ["/hire", "/book", "/applicants"][this.state.o],
+      go: [
+        () =>
+          mutate((d) => {
+            d.ui.applicant = "mala";
+          }),
+        () => draftFor("mala", "2026-10-17"),
+        () => {
+          mutate((d) => {
+            d.rejected.push("mala");
+          });
+          toast('Mala gets a kind "not this time" note');
+        },
+      ][this.state.o],
     };
   }
 }
@@ -181,6 +197,7 @@ export default function AfterMeetScreen() {
             <div>
               <Link
                 href={v.href}
+                onClick={v.go}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -281,6 +298,7 @@ export default function AfterMeetScreen() {
             </div>
             <Link
               href="/profile"
+              onClick={() => selectCaregiver("mala")}
               style={{
                 height: "40px",
                 padding: "0 18px",

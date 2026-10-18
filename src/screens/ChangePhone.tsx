@@ -1,8 +1,27 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "@/components/Toaster";
+import { maskPhone } from "@/lib/format";
+import { mutate, useDemo } from "@/lib/store";
 
 export default function ChangePhoneScreen() {
+  const demo = useDemo();
+  const router = useRouter();
+  const [phone, setPhone] = useState<string>(demo.ui.newPhone ?? "+94 71 238 5590");
+  const send = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (phone.replace(/\D/g, "").length < 9) return toast("Enter the full new number");
+    mutate((d) => {
+      d.ui.newPhone = phone.trim();
+    });
+    toast("Codes sent to both numbers");
+    router.push("/verify-phone");
+  };
   return (
     <div
       style={{
@@ -125,7 +144,7 @@ export default function ChangePhoneScreen() {
             >
               <span style={{ color: "#545454" }}>Current</span>
               <span style={{ fontWeight: "700", textAlign: "right" }}>
-                +94 77 ••• 4120
+                {maskPhone(demo.account.phone)}
                 <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
                   Code sent here first
                 </span>
@@ -135,7 +154,9 @@ export default function ChangePhoneScreen() {
           <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
             <span style={{ fontSize: "13px", fontWeight: "600" }}>New number</span>
             <input
-              defaultValue="+94 71 238 5590"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               style={{
                 height: "44px",
                 border: "1px solid #E2E2E2",
@@ -269,6 +290,7 @@ export default function ChangePhoneScreen() {
             </Link>
             <Link
               href="/verify-phone"
+              onClick={send}
               style={{
                 height: "44px",
                 padding: "0 22px",

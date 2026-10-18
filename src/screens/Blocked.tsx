@@ -3,20 +3,32 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
-import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { DCLogic, useLogic } from "@/lib/logic";
+import { mutate, useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
-  constructor(props: DCProps) {
-    super(props);
-    this.state = { un: false };
-  }
   renderVals() {
-    return { blocked: !this.state.un, none: this.state.un, flip: () => this.setState({ un: !this.state.un }) };
+    const { demo } = this.props;
+    const blocked = demo.blocked.length > 0;
+    return {
+      blocked,
+      none: !blocked,
+      flip: () =>
+        mutate((d) => {
+          if (d.blocked.length) {
+            d.ui.unblocked = d.blocked;
+            d.blocked = [];
+          } else {
+            d.blocked = d.ui.unblocked ?? [{ id: "rohini", when: "2 Oct", from: "from chat requests" }];
+          }
+        }),
+    };
   }
 }
 
 export default function BlockedScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{

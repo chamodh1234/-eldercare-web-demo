@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { mutate } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -67,12 +69,22 @@ class Logic extends DCLogic {
       keep: tg("keep"),
       endDate: this.state.extend ? ends[n] : "Sat 7 Nov",
       cta: n ? "Pause " + n + " visit" + (n > 1 ? "s" : "") : "Pick days",
+      pause: (e) => {
+        if (!n) {
+          e.preventDefault();
+          return toast("Pick the days to pause");
+        }
+        mutate((d) => {
+          d.weekly.status = "paused";
+          d.weekly.paused = this.state.sel.map((x) => `2026-10-${x}`);
+        });
+      },
     };
   }
 }
 
 export default function PauseCareScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { persist: "pauseCare" });
   return (
     <div
       style={{
@@ -414,6 +426,7 @@ export default function PauseCareScreen() {
               </Link>
               <Link
                 href="/care-paused"
+                onClick={v.pause}
                 style={{
                   height: "44px",
                   padding: "0 22px",

@@ -43,7 +43,10 @@ export default function EmptyHomeScreen() {
               <div style={{ width: "25%", height: "6px", borderRadius: "3px", background: "#000000" }}></div>
             </div>
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
-              <a href="#" style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px" }}>
+              <Link
+                href="/add-person"
+                style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px" }}
+              >
                 <span
                   style={{
                     width: "22px",
@@ -82,7 +85,7 @@ export default function EmptyHomeScreen() {
                 >
                   Add who you care for
                 </span>
-              </a>
+              </Link>
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
               <Link
                 href="/care-profile"

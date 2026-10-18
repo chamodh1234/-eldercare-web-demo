@@ -5,6 +5,8 @@ import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { mutate } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -38,12 +40,24 @@ class Logic extends DCLogic {
         flip: () => this.setState({ [k]: !on }),
       };
     };
-    return { langs, sample: L[this.state.l][2], tr: tg("tr") };
+    return {
+      langs,
+      sample: L[this.state.l][2],
+      tr: tg("tr"),
+      save: (e) => {
+        e.preventDefault();
+        this.props.commit();
+        mutate((d) => {
+          d.account.language = L[this.state.l][1];
+        });
+        toast(`Language set to ${L[this.state.l][1]}`);
+      },
+    };
   }
 }
 
 export default function LanguageScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { draft: "language" });
   return (
     <div
       style={{
@@ -199,6 +213,7 @@ export default function LanguageScreen() {
             <div>
               <Link
                 href="/language"
+                onClick={v.save}
                 style={{
                   height: "44px",
                   padding: "0 22px",

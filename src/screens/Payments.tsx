@@ -5,6 +5,12 @@ import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { downloadFile } from "@/lib/download";
+import { lkr } from "@/lib/format";
+import { mutate, useDemo } from "@/lib/store";
+
+const COLORS = { Paid: ["#EEEEEE", "#333333"], Held: ["#EAF0FD", "#1A4FB5"], Refunded: ["#E6F4EC", "#05663A"] };
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -12,6 +18,7 @@ class Logic extends DCLogic {
     this.state = { f: 0 };
   }
   renderVals() {
+    const { demo } = this.props;
     const F = ["All", "Paid", "Held", "Refunded"];
     const fil = F.map((f, i) => {
       const on = this.state.f === i;
@@ -23,32 +30,61 @@ class Logic extends DCLogic {
         flip: () => this.setState({ f: i }),
       };
     });
-    const R = [
-      ["15 Oct", "Weekly care · week 12–17 Oct", "Nirmala P.", "Visa ·· 4417", "LKR 23,760", "Held", 2],
-      ["10 Oct", "Visit · Sat 10 Oct", "Nirmala P.", "Visa ·· 4417", "LKR 3,960", "Paid", 1],
-      ["3 Oct", "Visit · Sat 3 Oct", "Nirmala P.", "Visa ·· 4417", "LKR 3,960", "Paid", 1],
-      ["1 Oct", "Visit · Thu 1 Oct (cancelled)", "Mala W.", "Visa ·· 4417", "− LKR 2,640", "Refunded", 3],
-      ["21 Sep", "Visit · Mon 21 Sep", "Shanthi R.", "MC ·· 9012", "LKR 2,200", "Paid", 1],
-    ];
-    const C = { Paid: ["#EEEEEE", "#333333"], Held: ["#EAF0FD", "#1A4FB5"], Refunded: ["#E6F4EC", "#05663A"] };
-    const rowsList = R.filter((r) => this.state.f === 0 || r[6] === this.state.f).map((r) => ({
-      date: r[0],
-      what: r[1],
-      who: r[2],
-      method: r[3],
-      amount: r[4],
-      status: r[5],
-      sBg: C[r[5]][0],
-      sFg: C[r[5]][1],
-      href: r[5] === "Refunded" ? "/refund-detail" : "/receipt",
-      link: r[5] === "Refunded" ? "Track" : "Receipt",
-    }));
-    return { fil, rowsList };
+    const want = F[this.state.f];
+    const rowsList = demo.payments
+      .filter((p) => this.state.f === 0 || p.status === want)
+      .map((p) => ({
+        date: p.date,
+        what: p.what,
+        who: p.who,
+        method: p.method,
+        amount: lkr(p.amount),
+        status: p.status,
+        sBg: COLORS[p.status][0],
+        sFg: COLORS[p.status][1],
+        href: p.status === "Refunded" ? "/refund-detail" : "/receipt",
+        link: p.status === "Refunded" ? "Track" : "Receipt",
+        open: () =>
+          mutate((d) => {
+            d.selectedPayment = p.id;
+          }),
+      }));
+    const sum = (st, month = "") =>
+      demo.payments
+        .filter((p) => p.status === st && p.date.endsWith(month))
+        .reduce((t, p) => t + Math.abs(p.amount), 0);
+    const paidOct = demo.payments.filter((p) => p.status === "Paid" && p.date.endsWith("Oct"));
+    const refunds = demo.payments.filter((p) => p.status === "Refunded");
+    return {
+      fil,
+      rowsList,
+      none: rowsList.length === 0,
+      paid: lkr(sum("Paid", "Oct")),
+      paidNote: `${paidOct.length} payment${paidOct.length === 1 ? "" : "s"} approved`,
+      held: lkr(sum("Held")),
+      refunded: lkr(sum("Refunded")),
+      refundNote: `${refunds.length} refund${refunds.length === 1 ? "" : "s"}`,
+      statement: (e) => {
+        e.preventDefault();
+        const rows = demo.payments.map((p) =>
+          [p.date + " 2026", p.what, p.who, p.method, p.amount, p.status]
+            .map((x) => `"${String(x).replace(/"/g, '""')}"`)
+            .join(","),
+        );
+        downloadFile(
+          "gloocan-statement-2026.csv",
+          ["Date,Description,Caregiver,Method,Amount (LKR),Status", ...rows].join("\n"),
+          "text/csv",
+        );
+        toast("Statement downloaded");
+      },
+    };
   }
 }
 
 export default function PaymentsScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo }, persist: "payments" });
   return (
     <div
       style={{
@@ -104,6 +140,7 @@ export default function PaymentsScreen() {
               </div>
               <Link
                 href="/receipt"
+                onClick={v.statement}
                 style={{
                   height: "40px",
                   padding: "0 18px",
@@ -148,8 +185,8 @@ export default function PaymentsScreen() {
                 }}
               >
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#545454" }}>Paid in October</span>
-                <span style={{ fontSize: "22px", fontWeight: "800" }}>LKR 7,920</span>
-                <span style={{ fontSize: "12px", color: "#545454" }}>2 visits approved</span>
+                <span style={{ fontSize: "22px", fontWeight: "800" }}>{v.paid}</span>
+                <span style={{ fontSize: "12px", color: "#545454" }}>{v.paidNote}</span>
               </div>
               <div
                 style={{
@@ -162,7 +199,7 @@ export default function PaymentsScreen() {
                 }}
               >
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#1A4FB5" }}>Held now</span>
-                <span style={{ fontSize: "22px", fontWeight: "800" }}>LKR 23,760</span>
+                <span style={{ fontSize: "22px", fontWeight: "800" }}>{v.held}</span>
                 <span style={{ fontSize: "12px", color: "#545454" }}>Released visit by visit</span>
               </div>
               <div
@@ -176,8 +213,8 @@ export default function PaymentsScreen() {
                 }}
               >
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#05663A" }}>Refunds</span>
-                <span style={{ fontSize: "22px", fontWeight: "800" }}>LKR 2,640</span>
-                <span style={{ fontSize: "12px", color: "#545454" }}>1 cancelled visit</span>
+                <span style={{ fontSize: "22px", fontWeight: "800" }}>{v.refunded}</span>
+                <span style={{ fontSize: "12px", color: "#545454" }}>{v.refundNote}</span>
               </div>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
@@ -227,6 +264,13 @@ export default function PaymentsScreen() {
                   <span>Status</span>
                   <span></span>
                 </div>
+                {v.none ? (
+                  <div
+                    style={{ padding: "18px 16px", borderTop: "1px solid #E2E2E2", fontSize: "13px", color: "#545454" }}
+                  >
+                    Nothing here yet.
+                  </div>
+                ) : null}
                 {v.rowsList.map((r: any, i2: number) => (
                   <Fragment key={i2}>
                     <div
@@ -262,7 +306,7 @@ export default function PaymentsScreen() {
                       >
                         {r.status}
                       </span>
-                      <Link href={r.href} style={{ fontWeight: "700", textDecoration: "underline" }}>
+                      <Link href={r.href} onClick={r.open} style={{ fontWeight: "700", textDecoration: "underline" }}>
                         {r.link}
                       </Link>
                     </div>

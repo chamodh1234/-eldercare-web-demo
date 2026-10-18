@@ -1,7 +1,23 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { dayLabel, lkr } from "@/lib/format";
+import { visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 export default function ReceiptScreen() {
+  const demo = useDemo();
+  const { account } = demo;
+  const pay = demo.payments.find((p) => p.id === demo.selectedPayment) ?? demo.payments[0];
+  // A visit payment links back to its visit for the detailed lines.
+  const visit = demo.visits.find((v) => pay && pay.what.startsWith(`Visit · ${dayLabel(v.date)}`));
+  const view = visit ? visitView(visit) : null;
+  const total = pay ? lkr(Math.abs(pay.amount)) : "";
+  const print = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.print();
+  };
   return (
     <div
       style={{
@@ -72,6 +88,7 @@ export default function ReceiptScreen() {
           <span style={{ display: "flex", gap: "8px" }}>
             <Link
               href="/receipt"
+              onClick={print}
               style={{
                 height: "40px",
                 padding: "0 18px",
@@ -107,6 +124,7 @@ export default function ReceiptScreen() {
             </Link>
             <Link
               href="/receipt"
+              onClick={print}
               style={{
                 height: "44px",
                 padding: "0 22px",
@@ -176,7 +194,9 @@ export default function ReceiptScreen() {
             </span>
             <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
               <span style={{ fontSize: "22px", fontWeight: "800" }}>Receipt</span>
-              <span style={{ fontSize: "13px", color: "#545454" }}>GL-B-58210 · 12 Oct 2026</span>
+              <span
+                style={{ fontSize: "13px", color: "#545454" }}
+              >{`${visit?.ref ?? "GL-P-" + (pay?.id.slice(-5) ?? "")} · ${pay?.date} 2026`}</span>
             </span>
           </div>
           <div
@@ -190,19 +210,19 @@ export default function ReceiptScreen() {
           >
             <div>
               <span style={{ fontWeight: "700", display: "block" }}>Billed to</span>
-              Dilani Fernando
+              {`${account.first} ${account.last}`}
               <br />
-              Colombo 05, Sri Lanka
+              {`${account.area}, Sri Lanka`}
               <br />
-              dilani.f@example.com
+              {account.email}
             </div>
             <div>
               <span style={{ fontWeight: "700", display: "block" }}>Visit</span>
-              Sat 10 Oct 2026 · 9:02 – 12:04
+              {view ? `${view.day} 2026 · ${view.time}` : pay?.what}
               <br />
-              Companionship for Kamala Fernando
+              {`${visit?.help ?? "Care"} for Kamala Fernando`}
               <br />
-              Caregiver: Nirmala Perera (GL-C-2210)
+              {`Caregiver: ${view?.cg.name ?? pay?.who}`}
             </div>
           </div>
           <div>
@@ -215,8 +235,8 @@ export default function ReceiptScreen() {
                 fontSize: "14px",
               }}
             >
-              <span>3 hrs × LKR 1,200</span>
-              <span>LKR 3,600</span>
+              <span>{view ? view.hoursLine : pay?.what}</span>
+              <span>{view ? view.sub : total}</span>
             </div>
             <div
               style={{
@@ -228,7 +248,7 @@ export default function ReceiptScreen() {
               }}
             >
               <span>{"Booking & safety fee (10%)"}</span>
-              <span>LKR 360</span>
+              <span>{view ? view.fee : "LKR 0"}</span>
             </div>
             <div
               style={{
@@ -241,7 +261,7 @@ export default function ReceiptScreen() {
               }}
             >
               <span>Total paid</span>
-              <span>LKR 3,960</span>
+              <span>{total}</span>
             </div>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
@@ -260,10 +280,12 @@ export default function ReceiptScreen() {
                 whiteSpace: "nowrap",
               }}
             >
-              Paid
+              {pay?.status}
             </span>
             <span style={{ fontSize: "13px", color: "#545454" }}>
-              Visa ·· 4417 · held 5 Oct · released after approval 12 Oct
+              {pay?.status === "Held"
+                ? `${pay.method} · held until you approve`
+                : `${pay?.method} · released after approval`}
             </span>
           </div>
           <span

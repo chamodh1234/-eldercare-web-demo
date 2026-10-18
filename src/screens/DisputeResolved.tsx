@@ -8,7 +8,7 @@ import { useDemo } from "@/lib/store";
 
 export default function DisputeResolvedScreen() {
   const demo = useDemo();
-  const { v, cg, day } = visitView(reportVisit(demo));
+  const { v, cg } = visitView(reportVisit(demo));
   const dispute = demo.dispute ?? { refund: 1200, reason: "Tasks not done", status: "open" };
   const subTotal = v.hours * v.rate;
   const refund = lkr(dispute.refund);

@@ -1,6 +1,24 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
+import { toast } from "@/components/Toaster";
+import { copyText } from "@/lib/download";
+
+const CODE = "DILANI1000";
+const LINK = "https://gloocan.lk/join?ref=DILANI1000";
+const SHARE = `Try Gloocan for checked caregivers at home. Use my code ${CODE} and we both get LKR 1,000: ${LINK}`;
+
+const copy = (text: string, done: string) => async (e: React.MouseEvent) => {
+  e.preventDefault();
+  toast((await copyText(text)) ? done : "Couldn't copy · select it instead");
+};
+
+function shareWhatsApp(e: React.MouseEvent) {
+  e.preventDefault();
+  window.open(`https://wa.me/?text=${encodeURIComponent(SHARE)}`, "_blank", "noopener");
+}
 
 export default function ReferralScreen() {
   return (
@@ -65,6 +83,7 @@ export default function ReferralScreen() {
                   </span>
                   <Link
                     href="/referral"
+                    onClick={copy(CODE, "Code copied")}
                     style={{
                       height: "32px",
                       padding: "0 14px",
@@ -87,6 +106,7 @@ export default function ReferralScreen() {
                 <div style={{ display: "flex", gap: "10px" }}>
                   <Link
                     href="/referral"
+                    onClick={shareWhatsApp}
                     style={{
                       height: "44px",
                       padding: "0 22px",
@@ -107,6 +127,7 @@ export default function ReferralScreen() {
                   </Link>
                   <Link
                     href="/referral"
+                    onClick={copy(LINK, "Link copied")}
                     style={{
                       height: "40px",
                       padding: "0 18px",

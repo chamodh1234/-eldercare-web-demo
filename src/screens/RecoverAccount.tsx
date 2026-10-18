@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -35,7 +36,8 @@ class Logic extends DCLogic {
 }
 
 export default function RecoverAccountScreen() {
-  const v = useLogic(Logic);
+  const [phone, setPhone] = useState("+94 77 512 4120");
+  const v = useLogic(Logic, { persist: "recover" });
   return (
     <div
       style={{
@@ -246,7 +248,9 @@ export default function RecoverAccountScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>Your old mobile number</span>
               <input
-                defaultValue="+94 77 512 4120"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -347,6 +351,12 @@ export default function RecoverAccountScreen() {
             </div>
             <Link
               href="/recovery-pending"
+              onClick={(e) => {
+                if (phone.replace(/\D/g, "").length < 9) {
+                  e.preventDefault();
+                  toast("Enter your old mobile number");
+                }
+              }}
               style={{
                 height: "44px",
                 padding: "0 22px",

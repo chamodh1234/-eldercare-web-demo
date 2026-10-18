@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { mutate } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -90,12 +92,22 @@ class Logic extends DCLogic {
       price:
         diff === 0 ? "Same price · " + fmt(p.rate) + " a visit" : fmt(p.rate) + " a visit · " + fmt(diff) + " less",
       cta: n ? "Ask " + p.first + " to cover " + n + " day" + (n > 1 ? "s" : "") : "Pick days",
+      ask: (e) => {
+        if (!n) {
+          e.preventDefault();
+          return toast("Pick the days she's off");
+        }
+        mutate((d) => {
+          d.weekly.cover = this.state.sel.map((x) => `2026-10-${x}`);
+          d.weekly.coverBy = p.first.toLowerCase();
+        });
+      },
     };
   }
 }
 
 export default function CoverCaregiverScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { persist: "coverCaregiver" });
   return (
     <div
       style={{
@@ -427,6 +439,7 @@ export default function CoverCaregiverScreen() {
             </Link>
             <Link
               href="/cover-requested"
+              onClick={v.ask}
               style={{
                 height: "44px",
                 padding: "0 22px",

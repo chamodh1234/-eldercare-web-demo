@@ -4,6 +4,11 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/Toaster";
+import { blockCaregiver } from "@/lib/actions";
+import { caregiver } from "@/lib/mock/caregivers";
+import { useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -40,7 +45,16 @@ class Logic extends DCLogic {
 }
 
 export default function ReportCaregiverScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const router = useRouter();
+  const cg = caregiver(demo.selectedCaregiver);
+  const v = useLogic(Logic, { persist: "reportReason" });
+  const justBlock = (e: React.MouseEvent) => {
+    e.preventDefault();
+    blockCaregiver(cg.id);
+    toast(`${cg.first} is blocked. She isn't told.`);
+    router.push("/visits");
+  };
   return (
     <div
       style={{
@@ -120,7 +134,7 @@ export default function ReportCaregiverScreen() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                Nirmala Perera
+                {cg.name}
               </h1>
               <span style={{ fontSize: "15px", color: "#545454" }}>Caregiver · Colombo 05</span>
             </div>
@@ -155,7 +169,9 @@ export default function ReportCaregiverScreen() {
         >
           <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
             <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "4px" }}>
-              <span style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.02em" }}>Report Nirmala</span>
+              <span
+                style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.02em" }}
+              >{`Report ${cg.first}`}</span>
               <span style={{ fontSize: "14px", color: "#545454" }}>Step 1 of 2 · what happened?</span>
             </span>
             <Link
@@ -284,8 +300,12 @@ export default function ReportCaregiverScreen() {
             ))}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center" }}>
-            <Link href="/profile" style={{ fontSize: "13px", fontWeight: "700", textDecoration: "underline" }}>
-              Just block Nirmala
+            <Link
+              href="/profile"
+              onClick={justBlock}
+              style={{ fontSize: "13px", fontWeight: "700", textDecoration: "underline" }}
+            >
+              {`Just block ${cg.first}`}
             </Link>
             <span style={{ display: "flex", gap: "10px" }}>
               <Link

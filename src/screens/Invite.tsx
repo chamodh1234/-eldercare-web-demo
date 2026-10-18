@@ -5,11 +5,14 @@ import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/Toaster";
+import { mutate, newId } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { rel: 0, see: true, msg: true, tasks: true, pay: false };
+    this.state = { rel: 0, see: true, msg: true, tasks: true, pay: false, name: "", phone: "" };
   }
   renderVals() {
     const tg = (k) => {
@@ -32,12 +35,48 @@ class Logic extends DCLogic {
         flip: () => this.setState({ rel: i }),
       };
     });
-    return { rels, see: tg("see"), msg: tg("msg"), tasks: tg("tasks"), pay: tg("pay") };
+    const { router } = this.props;
+    const st = this.state;
+    return {
+      rels,
+      see: tg("see"),
+      msg: tg("msg"),
+      tasks: tg("tasks"),
+      pay: tg("pay"),
+      name: { value: st.name, onChange: (e) => this.setState({ name: e.target.value }) },
+      phone: { value: st.phone, onChange: (e) => this.setState({ phone: e.target.value }) },
+      send: (e) => {
+        e.preventDefault();
+        const name = st.name.trim();
+        if (!name || st.phone.replace(/\D/g, "").length < 6) return toast("Add their name and mobile number");
+        const role = R[st.rel] === "Grandchild" ? "Grandchild" : R[st.rel];
+        mutate((d) => {
+          d.circle.push({
+            id: newId("m"),
+            name,
+            avatar: null,
+            role,
+            place: "invited just now",
+            status: "invited",
+            perms: { see: st.see, msg: st.msg, tasks: st.tasks, pay: st.pay },
+          });
+          d.activity.unshift({
+            who: "You",
+            what: `invited ${name}`,
+            when: "Now",
+            avatar: d.account.photo ?? "/images/dilani.png",
+          });
+        });
+        toast(`Invite sent to ${name} by SMS and WhatsApp`);
+        router.push("/care-circle");
+      },
+    };
   }
 }
 
 export default function InviteScreen() {
-  const v = useLogic(Logic);
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { router } });
   return (
     <div
       style={{
@@ -151,7 +190,8 @@ export default function InviteScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>Name</span>
               <input
-                defaultValue="Ruwan Fernando"
+                placeholder="Their name"
+                {...v.name}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -184,7 +224,9 @@ export default function InviteScreen() {
                   AU +61
                 </span>
                 <input
-                  defaultValue="412 555 018"
+                  placeholder="412 555 018"
+                  type="tel"
+                  {...v.phone}
                   style={{
                     flex: "1",
                     minWidth: "0",
@@ -394,6 +436,7 @@ export default function InviteScreen() {
             </Link>
             <Link
               href="/care-circle"
+              onClick={v.send}
               style={{
                 height: "44px",
                 padding: "0 22px",

@@ -1,6 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
+import { toast } from "@/components/Toaster";
+import { copyText } from "@/lib/download";
+
+const ARN = "7498 5281 0412 6630";
+
+async function copyArn(e: React.MouseEvent) {
+  e.preventDefault();
+  toast((await copyText(ARN.replace(/ /g, ""))) ? "Reference copied" : "Couldn't copy · select it instead");
+}
 
 export default function RefundDetailScreen() {
   return (
@@ -321,6 +332,7 @@ export default function RefundDetailScreen() {
                     </span>
                     <Link
                       href="/refund-detail"
+                      onClick={copyArn}
                       style={{
                         height: "32px",
                         padding: "0 14px",

@@ -3,11 +3,20 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { logIn } from "@/lib/actions";
+import { mutate } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { langs: ["Sinhala"], needs: ["Company", "Walking support", "Medicine reminders"] };
+    this.state = {
+      langs: ["Sinhala"],
+      needs: ["Company", "Walking support", "Medicine reminders"],
+      call: "Amma",
+      age: "78",
+      address: "24/3 Kirula Road, Colombo 05",
+    };
   }
   renderVals() {
     const chips = (key, labels) =>
@@ -24,12 +33,24 @@ class Logic extends DCLogic {
     return {
       langs: chips("langs", ["Sinhala", "Tamil", "English"]),
       needs: chips("needs", ["Company", "Walking support", "Memory support", "Meals", "Medicine reminders", "Bathing"]),
+      call: { value: this.state.call, onChange: (e) => this.setState({ call: e.target.value }) },
+      age: { value: this.state.age, onChange: (e) => this.setState({ age: e.target.value }) },
+      address: { value: this.state.address, onChange: (e) => this.setState({ address: e.target.value }) },
+      finish: () => {
+        mutate((d) => {
+          const p = d.people.find((x) => x.id === "amma");
+          if (p) Object.assign(p, { call: this.state.call.trim() || "Amma", age: Number(this.state.age) || p.age });
+          d.account.area = this.state.address.split(",").pop()?.trim() || d.account.area;
+        });
+        logIn();
+        toast("Welcome to Gloocan");
+      },
     };
   }
 }
 
 export default function SetupCareScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { persist: "setupCare" });
   return (
     <div
       style={{
@@ -286,7 +307,7 @@ export default function SetupCareScreen() {
               <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                 <span style={{ fontSize: "13px", fontWeight: "600" }}>What do you call them?</span>
                 <input
-                  defaultValue="Amma"
+                  {...v.call}
                   style={{
                     height: "44px",
                     border: "1px solid #E2E2E2",
@@ -304,7 +325,8 @@ export default function SetupCareScreen() {
               <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
                 <span style={{ fontSize: "13px", fontWeight: "600" }}>Age</span>
                 <input
-                  defaultValue="78"
+                  inputMode="numeric"
+                  {...v.age}
                   style={{
                     height: "44px",
                     border: "1px solid #E2E2E2",
@@ -323,7 +345,7 @@ export default function SetupCareScreen() {
             <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
               <span style={{ fontSize: "13px", fontWeight: "600" }}>Where do they live?</span>
               <input
-                defaultValue="24/3 Kirula Road, Colombo 05"
+                {...v.address}
                 style={{
                   height: "44px",
                   border: "1px solid #E2E2E2",
@@ -388,6 +410,7 @@ export default function SetupCareScreen() {
             </div>
             <Link
               href="/search"
+              onClick={v.finish}
               style={{
                 height: "44px",
                 padding: "0 22px",

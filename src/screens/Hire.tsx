@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { defaultCardLabel } from "@/lib/actions";
+import { fee, lkr, shortDate, TODAY } from "@/lib/format";
+import { caregiver } from "@/lib/mock/caregivers";
+import { mutate, newId, useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -19,12 +24,41 @@ class Logic extends DCLogic {
         flip: () => this.setState({ [k]: !on }),
       };
     };
-    return { close: tg("close") };
+    const { demo } = this.props;
+    const cg = caregiver(demo.ui.applicant ?? "mala");
+    const week = 6 * 3 * cg.rate;
+    const job = demo.jobs.find((j) => j.id === demo.ui.selectedJob) ?? demo.jobs.find((j) => j.status === "Live");
+    return {
+      close: tg("close"),
+      cg,
+      title: `Hire ${cg.name}?`,
+      rate: `${lkr(cg.rate)} / hr`,
+      week: lkr(week),
+      fee: lkr(fee(week)),
+      total: lkr(week + fee(week)),
+      hire: () => {
+        mutate((d) => {
+          const j = d.jobs.find((x) => x.id === job?.id);
+          if (j) Object.assign(j, { status: this.state.close ? "Filled" : "Live", applicants: `Hired ${cg.first}` });
+          d.payments.unshift({
+            id: newId("p"),
+            date: shortDate(TODAY),
+            what: "Weekly care · first week",
+            who: cg.short,
+            method: defaultCardLabel(),
+            amount: week + fee(week),
+            status: "Held",
+          });
+        });
+        toast(`${cg.first} is hired · first week held`);
+      },
+    };
   }
 }
 
 export default function HireScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{
@@ -88,7 +122,7 @@ export default function HireScreen() {
         >
           <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
             <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "4px" }}>
-              <span style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.02em" }}>Hire Mala Wickrama?</span>
+              <span style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.02em" }}>{v.title}</span>
               <span style={{ fontSize: "14px", color: "#545454" }}>
                 Mon–Sat · 9:00 – 12:00 · 12 Oct – 7 Nov · 24 visits
               </span>
@@ -123,7 +157,7 @@ export default function HireScreen() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <img
-              src="/images/mala.png"
+              src={v.cg.avatar}
               alt=""
               style={{
                 width: "52px",
@@ -135,7 +169,7 @@ export default function HireScreen() {
               }}
             />
             <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              <span style={{ fontSize: "16px", fontWeight: "800" }}>Mala Wickrama</span>
+              <span style={{ fontSize: "16px", fontWeight: "800" }}>{v.cg.name}</span>
               <span style={{ fontSize: "13px", color: "#545454" }}>4.9 ★ · verified · 2.4 km</span>
             </span>
           </div>
@@ -150,7 +184,7 @@ export default function HireScreen() {
               }}
             >
               <span style={{ color: "#545454" }}>Rate</span>
-              <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 1,200 / hr</span>
+              <span style={{ fontWeight: "700", textAlign: "right" }}>{v.rate}</span>
             </div>
             <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
             <div
@@ -163,7 +197,7 @@ export default function HireScreen() {
               }}
             >
               <span style={{ color: "#545454" }}>First week (6 visits)</span>
-              <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 21,600</span>
+              <span style={{ fontWeight: "700", textAlign: "right" }}>{v.week}</span>
             </div>
             <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
             <div
@@ -176,14 +210,14 @@ export default function HireScreen() {
               }}
             >
               <span style={{ color: "#545454" }}>{"Booking & safety fee"}</span>
-              <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 2,160</span>
+              <span style={{ fontWeight: "700", textAlign: "right" }}>{v.fee}</span>
             </div>
             <div style={{ height: "1px", background: "#E2E2E2" }}></div>
             <div
               style={{ display: "flex", justifyContent: "space-between", padding: "12px 16px", background: "#EAF0FD" }}
             >
               <span style={{ fontSize: "14px", fontWeight: "700", color: "#1A4FB5" }}>Held now · Visa ·· 4417</span>
-              <span style={{ fontSize: "18px", fontWeight: "800" }}>LKR 23,760</span>
+              <span style={{ fontSize: "18px", fontWeight: "800" }}>{v.total}</span>
             </div>
           </div>
           <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
@@ -250,6 +284,7 @@ export default function HireScreen() {
             </Link>
             <Link
               href="/weekly-care"
+              onClick={v.hire}
               style={{
                 height: "44px",
                 padding: "0 22px",

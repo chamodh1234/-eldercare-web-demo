@@ -34,16 +34,36 @@ type Options = {
   props?: DCProps;
   /** Keep this screen's UI state in the demo store under this key. */
   persist?: string;
+  /**
+   * Like `persist`, but changes stay a local draft until the logic calls
+   * `this.props.commit()`; `this.props.discard()` drops them.
+   */
+  draft?: string;
 };
 
 /** Runs a DCLogic class as React state and returns its render values. */
-export function useLogic(Ctor: new (props: DCProps) => DCLogic, { props = {}, persist }: Options = {}) {
-  const [local, setLocal] = useState<State>(() => new Ctor(props).state);
+export function useLogic(Ctor: new (props: DCProps) => DCLogic, { props = {}, persist, draft }: Options = {}) {
+  const [local, setLocal] = useState<State>(() => (draft ? {} : new Ctor(props).state));
   const demo = useDemo();
   const logic = new Ctor(props);
   const merge = (prev: State, patch: Patch) => ({ ...prev, ...(typeof patch === "function" ? patch(prev) : patch) });
 
-  if (persist) {
+  if (draft) {
+    const current = { ...logic.state, ...demo.ui[draft], ...local };
+    logic.state = current;
+    logic.setState = (patch) => setLocal((prev) => merge(prev, typeof patch === "function" ? patch(current) : patch));
+    logic.props = {
+      ...props,
+      dirty: Object.keys(local).length > 0,
+      commit: () => {
+        mutate((d) => {
+          d.ui[draft] = current;
+        });
+        setLocal({});
+      },
+      discard: () => setLocal({}),
+    };
+  } else if (persist) {
     logic.state = { ...logic.state, ...demo.ui[persist] };
     const current = logic.state;
     logic.setState = (patch) =>

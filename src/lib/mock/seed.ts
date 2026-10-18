@@ -126,7 +126,14 @@ export const seed = {
     photo: null as string | null,
   },
   people: [
-    { id: "amma", call: "Amma", name: "Kamala Fernando", age: 78, note: "Next visit Sat 9:00 · Nirmala", avatar: "/images/amma.png" },
+    {
+      id: "amma",
+      call: "Amma",
+      name: "Kamala Fernando",
+      age: 78,
+      note: "Next visit Sat 9:00 · Nirmala",
+      avatar: "/images/amma.png",
+    },
   ] as Person[],
   activePerson: "amma",
 
@@ -292,8 +299,22 @@ export const seed = {
   ] as Visit[],
 
   tasks: [
-    { id: "r-walk", short: "walk", kind: "routine", title: "Short walk in the garden", note: "Hold her left arm on the steps", time: "9:00" },
-    { id: "r-tea", short: "tea", kind: "routine", title: "Tea and a light snack", note: "No sugar in her tea", time: "9:30" },
+    {
+      id: "r-walk",
+      short: "walk",
+      kind: "routine",
+      title: "Short walk in the garden",
+      note: "Hold her left arm on the steps",
+      time: "9:00",
+    },
+    {
+      id: "r-tea",
+      short: "tea",
+      kind: "routine",
+      title: "Tea and a light snack",
+      note: "No sugar in her tea",
+      time: "9:30",
+    },
     {
       id: "r-med",
       short: "medicine reminder",
@@ -302,9 +323,28 @@ export const seed = {
       note: "Blue box on the shelf · remind & log only",
       time: "10:00",
     },
-    { id: "r-lunch", short: "lunch", kind: "routine", title: "Help with lunch", note: "Rice and dhal are in the fridge", time: "11:30" },
-    { id: "b-knee", kind: "booking", title: "Knee exercises from physio", note: "Until 7 Nov · sheet on the fridge", time: "10:30" },
-    { id: "b-bandage", kind: "booking", title: "Check knee bandage is dry", note: "Call Dilani if wet or red", time: "Any" },
+    {
+      id: "r-lunch",
+      short: "lunch",
+      kind: "routine",
+      title: "Help with lunch",
+      note: "Rice and dhal are in the fridge",
+      time: "11:30",
+    },
+    {
+      id: "b-knee",
+      kind: "booking",
+      title: "Knee exercises from physio",
+      note: "Until 7 Nov · sheet on the fridge",
+      time: "10:30",
+    },
+    {
+      id: "b-bandage",
+      kind: "booking",
+      title: "Check knee bandage is dry",
+      note: "Call Dilani if wet or red",
+      time: "Any",
+    },
     day("2026-10-15", "Let the electrician in", "Today · from Dilani 6:05", "11:00", { seen: "6:12" }),
     day("2026-10-16", "Physio comes · stay with Amma", "Added by Ruwan", "9:30"),
     day("2026-10-17", "Aunty Rani visits · tea for two", "Use the good cups", "10:00"),
@@ -635,8 +675,22 @@ export const seed = {
       sub: "Nawaloka Hospital · 28 Sep",
       caregivers: true,
     },
-    { id: "d3", kind: "Lab report", abbr: "Lab", title: "Blood report", sub: "5 Oct · sugar & cholesterol", caregivers: false },
-    { id: "d4", kind: "Other", abbr: "Plan", title: "Physio exercise sheet", sub: "2 Oct · 6 exercises", caregivers: true },
+    {
+      id: "d3",
+      kind: "Lab report",
+      abbr: "Lab",
+      title: "Blood report",
+      sub: "5 Oct · sugar & cholesterol",
+      caregivers: false,
+    },
+    {
+      id: "d4",
+      kind: "Other",
+      abbr: "Plan",
+      title: "Physio exercise sheet",
+      sub: "2 Oct · 6 exercises",
+      caregivers: true,
+    },
   ] as Doc[],
 
   jobs: [
@@ -689,7 +743,13 @@ export const seed = {
       status: "Under review",
     },
   ] as Report[],
-  dispute: null as null | { visitId: string; reason: string; refund: number; note: string; status: "open" | "resolved" },
+  dispute: null as null | {
+    visitId: string;
+    reason: string;
+    refund: number;
+    note: string;
+    status: "open" | "resolved";
+  },
   incidentSeen: false,
   extension: null as null | {
     hours: number;

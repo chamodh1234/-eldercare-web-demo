@@ -1,7 +1,19 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { useDemo } from "@/lib/store";
 
 export default function PersonAddedScreen() {
+  const demo = useDemo();
+  const p = demo.people.find((x) => x.id === demo.ui.lastPerson) ??
+    demo.people[demo.people.length - 1] ?? {
+      call: "Appachchi",
+      name: "Lionel Fernando",
+      age: 82,
+      avatar: "/images/appachchi.png",
+    };
+  const short = `${p.call} · ${p.name.split(" ")[0]} ${(p.name.split(" ")[1] ?? "").slice(0, 1)}., ${p.age}`;
   return (
     <div
       style={{
@@ -105,10 +117,10 @@ export default function PersonAddedScreen() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                Appachchi is added
+                {`${p.call} is added`}
               </h1>
               <span style={{ fontSize: "15px", lineHeight: "1.5", color: "#333333" }}>
-                Switch between Amma and Appachchi from your name at the top.
+                {`Switch between Amma and ${p.call} from your name at the top.`}
               </span>
             </div>
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
@@ -301,7 +313,7 @@ export default function PersonAddedScreen() {
                 }}
               >
                 <img
-                  src="/images/appachchi.png"
+                  src={p.avatar}
                   alt=""
                   style={{
                     width: "40px",
@@ -313,7 +325,7 @@ export default function PersonAddedScreen() {
                   }}
                 />
                 <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700" }}>Appachchi · Lionel F., 82</span>
+                  <span style={{ fontSize: "14px", fontWeight: "700" }}>{short}</span>
                   <span style={{ fontSize: "12px", color: "#545454" }}>New</span>
                 </span>
                 <span

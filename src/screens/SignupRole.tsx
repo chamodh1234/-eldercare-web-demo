@@ -31,7 +31,7 @@ class Logic extends DCLogic {
 }
 
 export default function SignupRoleScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { persist: "signupRole" });
   return (
     <div
       style={{

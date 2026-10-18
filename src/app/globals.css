@@ -48,3 +48,11 @@ img {
     flex-wrap: wrap;
   }
 }
+
+/* Printing a receipt: leave out the app's navigation. */
+@media print {
+  header,
+  aside[aria-label="Account"] {
+    display: none !important;
+  }
+}

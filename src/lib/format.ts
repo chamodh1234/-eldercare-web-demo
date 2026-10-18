@@ -37,7 +37,10 @@ export const fee = (sub: number) => Math.round(sub * 0.1);
 /** "9:00" + 3 hours → "12:00"; "2:00 PM" + 2 → "4:00 PM". */
 export const endTime = (start: string, hours: number) => {
   const pm = /PM/.test(start);
-  const [h, m] = start.replace(/\s*(AM|PM)/, "").split(":").map(Number);
+  const [h, m] = start
+    .replace(/\s*(AM|PM)/, "")
+    .split(":")
+    .map(Number);
   let end = (pm && h < 12 ? h + 12 : h) + hours;
   if (end > 24) end -= 24;
   const mm = String(m || 0).padStart(2, "0");
@@ -57,7 +60,10 @@ export const weekday = (iso: string) => DAY_NAMES[parse(iso).getUTCDay()];
 /** "12:00" + 60 → "1:00 PM"; "12:00" + 30 → "12:30 PM". Morning times stay without AM, as in the design. */
 export const plusMinutes = (t: string, mins: number) => {
   const pm = /PM/.test(t);
-  const [h, m] = t.replace(/\s*(AM|PM)/, "").split(":").map(Number);
+  const [h, m] = t
+    .replace(/\s*(AM|PM)/, "")
+    .split(":")
+    .map(Number);
   const total = (pm && h < 12 ? h + 12 : h) * 60 + (m || 0) + mins;
   const hh = Math.floor(total / 60) % 24;
   const mm = String(total % 60).padStart(2, "0");
@@ -68,3 +74,9 @@ export const plusMinutes = (t: string, mins: number) => {
 /** "30 min", "1 hour", "2 hours" */
 export const durationLabel = (mins: number) =>
   mins < 60 ? `${mins} min` : mins === 60 ? "1 hour" : `${mins / 60} hours`;
+
+/** "+94 77 512 4120" → "+94 77 ••• 4120" */
+export const maskPhone = (p: string) => {
+  const parts = p.split(" ");
+  return parts.length > 3 ? [...parts.slice(0, 2), "•••", parts[parts.length - 1]].join(" ") : p;
+};

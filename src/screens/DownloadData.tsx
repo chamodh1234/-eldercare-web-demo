@@ -5,6 +5,7 @@ import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountNav } from "@/components/AccountNav";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -39,13 +40,16 @@ class Logic extends DCLogic {
       fmts: pick1("f", ["PDF", "Spreadsheet (CSV)"]),
       notSent: !this.state.sent,
       sent: this.state.sent,
-      send: () => this.setState({ sent: true }),
+      send: () => {
+        this.setState({ sent: true });
+        toast("Request received · we'll email the link within 24 hrs");
+      },
     };
   }
 }
 
 export default function DownloadDataScreen() {
-  const v = useLogic(Logic);
+  const v = useLogic(Logic, { persist: "downloadData" });
   return (
     <div
       style={{
