@@ -4,6 +4,11 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/Toaster";
+import { cancelVisit, openChat } from "@/lib/actions";
+import { selectedVisit } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -11,6 +16,7 @@ class Logic extends DCLogic {
     this.state = { o: 1 };
   }
   renderVals() {
+    const { demo, router } = this.props;
     const radio = (key, list) =>
       list.map((r, i) => {
         const on = this.state[key] === i;
@@ -25,6 +31,22 @@ class Logic extends DCLogic {
           pick: () => this.setState({ [key]: i }),
         };
       });
+    const visit = selectedVisit(demo);
+    const go = [
+      () => {
+        toast("We'll keep waiting until 8 PM");
+        router.push("/visits");
+      },
+      () => {
+        toast("Sent to Shanthi, Mala and Priya");
+        router.push("/request-declined");
+      },
+      () => {
+        cancelVisit(visit.id, "No reply");
+        toast("Request cancelled · hold released");
+        router.push("/visits");
+      },
+    ];
     return {
       opts: radio("o", [
         ["Keep waiting until 8 PM", "Your hold stays · released if she doesn't reply"],
@@ -32,12 +54,18 @@ class Logic extends DCLogic {
         ["Cancel the request", "Hold released right away"],
       ]),
       cta: ["Keep waiting", "Send to 3 caregivers", "Cancel request"][this.state.o],
+      go: (e) => {
+        e.preventDefault();
+        go[this.state.o]();
+      },
     };
   }
 }
 
 export default function RequestNoReplyScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { demo, router } });
   return (
     <div
       style={{
@@ -247,6 +275,7 @@ export default function RequestNoReplyScreen() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <Link
                 href="/request-declined"
+                onClick={v.go}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -267,6 +296,7 @@ export default function RequestNoReplyScreen() {
               </Link>
               <Link
                 href="/messages"
+                onClick={() => openChat("nirmala")}
                 style={{
                   height: "40px",
                   padding: "0 18px",

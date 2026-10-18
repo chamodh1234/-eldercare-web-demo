@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { openChat } from "@/lib/actions";
 
 export default function OnTheWayScreen() {
   return (
@@ -191,6 +194,7 @@ export default function OnTheWayScreen() {
               </span>
               <Link
                 href="/messages"
+                onClick={() => openChat("nirmala")}
                 aria-label="Message"
                 style={{
                   width: "36px",

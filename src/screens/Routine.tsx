@@ -1,7 +1,41 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { Fragment, useState } from "react";
+import { toast } from "@/components/Toaster";
+import type { Task } from "@/lib/mock/seed";
+import { mutate, useDemo } from "@/lib/store";
 
 export default function RoutineScreen() {
+  const demo = useDemo();
+  const routine = demo.tasks.filter((t) => t.kind === "routine");
+  // Unsaved changes (removals and new order) until "Save routine".
+  const [order, setOrder] = useState<string[] | null>(null);
+  const [drag, setDrag] = useState<string | null>(null);
+  const ids = order ?? routine.map((t) => t.id);
+  const rows = ids.map((id) => routine.find((t) => t.id === id)).filter((t): t is Task => !!t);
+  const moveOver = (overId: string) => {
+    if (!drag || drag === overId) return;
+    const next = ids.filter((x) => x !== drag);
+    next.splice(next.indexOf(overId) + (ids.indexOf(drag) < ids.indexOf(overId) ? 1 : 0), 0, drag);
+    setOrder(next);
+  };
+  const edit = (t: Task | null) =>
+    mutate((d) => {
+      d.ui.addTask = t
+        ? { w: 0, editId: t.id, title: t.title, time: t.time, note: t.note }
+        : { w: 0, title: "", time: "", note: "" };
+    });
+  const save = () => {
+    mutate((d) => {
+      const others = d.tasks.filter((t) => t.kind !== "routine");
+      const kept = ids.map((id) => d.tasks.find((t) => t.id === id)).filter((t): t is Task => !!t);
+      d.tasks = [...kept, ...others];
+    });
+    setOrder(null);
+    toast("Routine saved · every caregiver sees it");
+  };
   return (
     <div
       style={{
@@ -78,390 +112,126 @@ export default function RoutineScreen() {
               </span>
             </div>
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "16px", overflow: "hidden" }}>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "24px 70px 1fr auto",
-                  gap: "12px",
-                  alignItems: "center",
-                  padding: "12px 16px",
-                }}
-              >
-                <span style={{ color: "#A6A6A6", display: "flex" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <circle cx="9" cy="6" r="1.6"></circle>
-                    <circle cx="15" cy="6" r="1.6"></circle>
-                    <circle cx="9" cy="12" r="1.6"></circle>
-                    <circle cx="15" cy="12" r="1.6"></circle>
-                    <circle cx="9" cy="18" r="1.6"></circle>
-                    <circle cx="15" cy="18" r="1.6"></circle>
-                  </svg>
-                </span>
-                <span
-                  style={{
-                    height: "32px",
-                    borderRadius: "8px",
-                    background: "#F6F6F6",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "13px",
-                    fontWeight: "700",
-                  }}
-                >
-                  9:00
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: "0" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700" }}>Short walk in the garden</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Hold her left arm on the steps</span>
-                </span>
-                <span style={{ display: "flex", gap: "4px" }}>
-                  <Link
-                    href="/add-task"
-                    aria-label="Edit Short walk in the garden"
+              {rows.map((t, i) => (
+                <Fragment key={t.id}>
+                  {i > 0 ? <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "0px" }}></div> : null}
+                  <div
+                    draggable
+                    onDragStart={() => setDrag(t.id)}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      moveOver(t.id);
+                    }}
+                    onDragEnd={() => setDrag(null)}
                     style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "16px",
-                      background: "#EEEEEE",
-                      display: "flex",
+                      opacity: drag === t.id ? 0.5 : 1,
+                      cursor: "grab",
+                      display: "grid",
+                      gridTemplateColumns: "24px 70px 1fr auto",
+                      gap: "12px",
                       alignItems: "center",
-                      justifyContent: "center",
+                      padding: "12px 16px",
                     }}
                   >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
+                    <span style={{ color: "#A6A6A6", display: "flex" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <circle cx="9" cy="6" r="1.6"></circle>
+                        <circle cx="15" cy="6" r="1.6"></circle>
+                        <circle cx="9" cy="12" r="1.6"></circle>
+                        <circle cx="15" cy="12" r="1.6"></circle>
+                        <circle cx="9" cy="18" r="1.6"></circle>
+                        <circle cx="15" cy="18" r="1.6"></circle>
+                      </svg>
+                    </span>
+                    <span
+                      style={{
+                        height: "32px",
+                        borderRadius: "8px",
+                        background: "#F6F6F6",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "13px",
+                        fontWeight: "700",
+                      }}
                     >
-                      <path d="M4 20h4L19 9l-4-4L4 16z"></path>
-                    </svg>
-                  </Link>
-                  <Link
-                    href="/routine"
-                    aria-label="Remove Short walk in the garden"
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "16px",
-                      background: "#EEEEEE",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"></path>
-                    </svg>
-                  </Link>
-                </span>
-              </div>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "0px" }}></div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "24px 70px 1fr auto",
-                  gap: "12px",
-                  alignItems: "center",
-                  padding: "12px 16px",
-                }}
-              >
-                <span style={{ color: "#A6A6A6", display: "flex" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <circle cx="9" cy="6" r="1.6"></circle>
-                    <circle cx="15" cy="6" r="1.6"></circle>
-                    <circle cx="9" cy="12" r="1.6"></circle>
-                    <circle cx="15" cy="12" r="1.6"></circle>
-                    <circle cx="9" cy="18" r="1.6"></circle>
-                    <circle cx="15" cy="18" r="1.6"></circle>
-                  </svg>
-                </span>
-                <span
-                  style={{
-                    height: "32px",
-                    borderRadius: "8px",
-                    background: "#F6F6F6",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "13px",
-                    fontWeight: "700",
-                  }}
-                >
-                  9:30
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: "0" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700" }}>Tea and a light snack</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>No sugar in her tea</span>
-                </span>
-                <span style={{ display: "flex", gap: "4px" }}>
-                  <Link
-                    href="/add-task"
-                    aria-label="Edit Tea and a light snack"
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "16px",
-                      background: "#EEEEEE",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M4 20h4L19 9l-4-4L4 16z"></path>
-                    </svg>
-                  </Link>
-                  <Link
-                    href="/routine"
-                    aria-label="Remove Tea and a light snack"
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "16px",
-                      background: "#EEEEEE",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"></path>
-                    </svg>
-                  </Link>
-                </span>
-              </div>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "0px" }}></div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "24px 70px 1fr auto",
-                  gap: "12px",
-                  alignItems: "center",
-                  padding: "12px 16px",
-                }}
-              >
-                <span style={{ color: "#A6A6A6", display: "flex" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <circle cx="9" cy="6" r="1.6"></circle>
-                    <circle cx="15" cy="6" r="1.6"></circle>
-                    <circle cx="9" cy="12" r="1.6"></circle>
-                    <circle cx="15" cy="12" r="1.6"></circle>
-                    <circle cx="9" cy="18" r="1.6"></circle>
-                    <circle cx="15" cy="18" r="1.6"></circle>
-                  </svg>
-                </span>
-                <span
-                  style={{
-                    height: "32px",
-                    borderRadius: "8px",
-                    background: "#F6F6F6",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "13px",
-                    fontWeight: "700",
-                  }}
-                >
-                  10:00
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: "0" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700" }}>Medicine reminder</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>
-                    {"Blue box on the shelf · remind & log only"}
-                  </span>
-                </span>
-                <span style={{ display: "flex", gap: "4px" }}>
-                  <Link
-                    href="/add-task"
-                    aria-label="Edit Medicine reminder"
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "16px",
-                      background: "#EEEEEE",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M4 20h4L19 9l-4-4L4 16z"></path>
-                    </svg>
-                  </Link>
-                  <Link
-                    href="/routine"
-                    aria-label="Remove Medicine reminder"
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "16px",
-                      background: "#EEEEEE",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"></path>
-                    </svg>
-                  </Link>
-                </span>
-              </div>
-              <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "0px" }}></div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "24px 70px 1fr auto",
-                  gap: "12px",
-                  alignItems: "center",
-                  padding: "12px 16px",
-                }}
-              >
-                <span style={{ color: "#A6A6A6", display: "flex" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <circle cx="9" cy="6" r="1.6"></circle>
-                    <circle cx="15" cy="6" r="1.6"></circle>
-                    <circle cx="9" cy="12" r="1.6"></circle>
-                    <circle cx="15" cy="12" r="1.6"></circle>
-                    <circle cx="9" cy="18" r="1.6"></circle>
-                    <circle cx="15" cy="18" r="1.6"></circle>
-                  </svg>
-                </span>
-                <span
-                  style={{
-                    height: "32px",
-                    borderRadius: "8px",
-                    background: "#F6F6F6",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "13px",
-                    fontWeight: "700",
-                  }}
-                >
-                  11:30
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: "0" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "700" }}>Help with lunch</span>
-                  <span style={{ fontSize: "12px", color: "#545454" }}>Rice and dhal are in the fridge</span>
-                </span>
-                <span style={{ display: "flex", gap: "4px" }}>
-                  <Link
-                    href="/add-task"
-                    aria-label="Edit Help with lunch"
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "16px",
-                      background: "#EEEEEE",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M4 20h4L19 9l-4-4L4 16z"></path>
-                    </svg>
-                  </Link>
-                  <Link
-                    href="/routine"
-                    aria-label="Remove Help with lunch"
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "16px",
-                      background: "#EEEEEE",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"></path>
-                    </svg>
-                  </Link>
-                </span>
-              </div>
+                      {t.time}
+                    </span>
+                    <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: "0" }}>
+                      <span style={{ fontSize: "14px", fontWeight: "700" }}>{t.title}</span>
+                      <span style={{ fontSize: "12px", color: "#545454" }}>{t.note}</span>
+                    </span>
+                    <span style={{ display: "flex", gap: "4px" }}>
+                      <Link
+                        href="/add-task"
+                        aria-label={`Edit ${t.title}`}
+                        onClick={() => edit(t)}
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "16px",
+                          background: "#EEEEEE",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M4 20h4L19 9l-4-4L4 16z"></path>
+                        </svg>
+                      </Link>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${t.title}`}
+                        onClick={() => setOrder(ids.filter((x) => x !== t.id))}
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "16px",
+                          background: "#EEEEEE",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          border: "none",
+                          color: "#000000",
+                          padding: "0",
+                        }}
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"></path>
+                        </svg>
+                      </button>
+                    </span>
+                  </div>
+                </Fragment>
+              ))}
+              {rows.length === 0 ? (
+                <div style={{ padding: "16px", fontSize: "14px", color: "#545454" }}>No routine tasks yet.</div>
+              ) : null}
               <div style={{ height: "1px", background: "#E2E2E2" }}></div>
               <Link
                 href="/add-task"
+                onClick={() => edit(null)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -490,6 +260,7 @@ export default function RoutineScreen() {
             <div style={{ display: "flex", gap: "10px" }}>
               <Link
                 href="/care-plan"
+                onClick={save}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -510,6 +281,7 @@ export default function RoutineScreen() {
               </Link>
               <Link
                 href="/care-plan"
+                onClick={() => setOrder(null)}
                 style={{
                   height: "40px",
                   padding: "0 18px",

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree, Noto_Sans_Sinhala, Noto_Sans_Tamil } from "next/font/google";
+import { Toaster } from "@/components/Toaster";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -35,7 +36,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${figtree.variable} ${sinhala.variable} ${tamil.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   CardIcon,
@@ -11,6 +13,8 @@ import {
   BellIcon,
   ShieldIcon,
 } from "./icons";
+import { logOut } from "@/lib/actions";
+import { useDemo } from "@/lib/store";
 import styles from "./AccountNav.module.css";
 
 const ITEMS = [
@@ -30,13 +34,16 @@ const ITEMS = [
 
 /** The account section's side menu. On phones it becomes a scrolling row. */
 export function AccountNav({ active }: { active?: string }) {
+  const { account } = useDemo();
   return (
     <aside aria-label="Account" className={styles.aside}>
       <div className={styles.me}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/images/dilani.png" alt="" className={styles.avatar} />
+        <img src={account.photo ?? "/images/dilani.png"} alt="" className={styles.avatar} />
         <span className={styles.meText}>
-          <span className={styles.name}>Dilani Fernando</span>
+          <span className={styles.name}>
+            {account.first} {account.last}
+          </span>
           <span className={styles.kind}>Family account</span>
         </span>
       </div>
@@ -55,7 +62,7 @@ export function AccountNav({ active }: { active?: string }) {
             </Link>
           );
         })}
-        <Link href="/login" className={`${styles.item} ${styles.logout}`}>
+        <Link href="/login" onClick={logOut} className={`${styles.item} ${styles.logout}`}>
           <LogoutIcon />
           Log out
         </Link>

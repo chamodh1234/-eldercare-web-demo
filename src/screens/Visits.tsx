@@ -4,116 +4,54 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { selectCaregiver, selectVisit } from "@/lib/actions";
+import { dayLabel, lkr, TODAY } from "@/lib/format";
+import { caregiver } from "@/lib/mock/caregivers";
+import { liveTasks, PAST, statusTag, UPCOMING } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { tab: 0, sel: 0 };
+    this.state = { tab: 0 };
   }
   renderVals() {
-    const N = "/images/nirmala.png",
-      M = "/images/mala.png",
-      S = "/images/shanthi.png";
-    const G = ["#E6F4EC", "#05663A"],
-      B = ["#EAF0FD", "#1A4FB5"],
-      Gy = ["#EEEEEE", "#333333"];
-    const data = [
-      [
-        {
-          k: "live",
-          when: "Today · Thu 15 Oct",
-          time: "9:00 – 12:00",
-          who: "Nirmala Perera",
-          av: N,
-          amount: "LKR 3,960",
-          tag: "Live now",
-          t: G,
-        },
-        {
-          k: "up",
-          when: "Sat 17 Oct",
-          time: "9:00 – 12:00",
-          who: "Nirmala Perera",
-          av: N,
-          amount: "LKR 3,960",
-          tag: "Confirmed",
-          t: G,
-        },
-        {
-          k: "up",
-          when: "Tue 20 Oct",
-          time: "2:00 – 4:00 PM",
-          who: "Mala Wickrama",
-          av: M,
-          amount: "LKR 2,640",
-          tag: "Covering Nirmala",
-          t: B,
-        },
-        {
-          k: "up",
-          when: "Sat 24 Oct",
-          time: "9:00 – 12:00 · weekly",
-          who: "Nirmala Perera",
-          av: N,
-          amount: "LKR 3,960",
-          tag: "Confirmed",
-          t: G,
-        },
-      ],
-      [
-        {
-          k: "past",
-          when: "Sat 10 Oct",
-          time: "9:02 – 12:04",
-          who: "Nirmala Perera",
-          av: N,
-          amount: "LKR 3,960",
-          tag: "Paid",
-          t: Gy,
-        },
-        {
-          k: "past",
-          when: "Sat 3 Oct",
-          time: "9:00 – 12:01",
-          who: "Nirmala Perera",
-          av: N,
-          amount: "LKR 3,960",
-          tag: "Paid",
-          t: Gy,
-        },
-        {
-          k: "past",
-          when: "Mon 21 Sep",
-          time: "2:00 – 4:00 PM",
-          who: "Shanthi Rajapaksha",
-          av: S,
-          amount: "LKR 2,200",
-          tag: "Paid",
-          t: Gy,
-        },
-      ],
-      [
-        {
-          k: "past",
-          when: "Thu 1 Oct",
-          time: "Cancelled by you",
-          who: "Mala Wickrama",
-          av: M,
-          amount: "LKR 2,640",
-          tag: "Refunded",
-          t: Gy,
-        },
-      ],
+    const { demo } = this.props;
+    const groups = [
+      demo.visits.filter((x) => UPCOMING.includes(x.status)).sort((a, b) => a.date.localeCompare(b.date)),
+      demo.visits.filter((x) => PAST.includes(x.status)).sort((a, b) => b.date.localeCompare(a.date)),
+      demo.visits.filter((x) => x.status === "cancelled").sort((a, b) => b.date.localeCompare(a.date)),
     ];
-    const list = data[this.state.tab];
-    const si = Math.min(this.state.sel, list.length - 1);
-    const rows = list.map((r, i) => ({
-      ...r,
-      tagBg: r.t[0],
-      tagFg: r.t[1],
-      pressed: i === si ? "true" : "false",
-      bg: i === si ? "#F6F6F6" : "#FFFFFF",
-      pick: () => this.setState({ sel: i }),
+    const list = groups[this.state.tab];
+    const selId = list.some((x) => x.id === demo.selectedVisit) ? demo.selectedVisit : list[0]?.id;
+    const view = (x) => {
+      const cg = caregiver(x.caregiverId);
+      const tag = statusTag[x.status];
+      return {
+        id: x.id,
+        k: x.status === "live" ? "live" : PAST.includes(x.status) || x.status === "cancelled" ? "past" : "up",
+        when: (x.date === TODAY ? "Today · " : "") + dayLabel(x.date),
+        time:
+          x.status === "cancelled"
+            ? x.cancelReason || "Cancelled"
+            : `${x.start} – ${x.end}` + (x.weekly && x.status === "confirmed" ? " · weekly" : ""),
+        who: cg.name,
+        av: cg.avatar,
+        amount: lkr(x.amount),
+        tag: tag[0],
+        tagBg: tag[1],
+        tagFg: tag[2],
+        weekly: x.weekly,
+        toApprove: x.status === "toApprove",
+        paidLabel: x.status === "toApprove" ? "To release" : x.status === "cancelled" ? "Refunded" : "Paid",
+        rating: x.rating ? "★".repeat(x.rating) : "Not rated yet",
+      };
+    };
+    const rows = list.map((x) => ({
+      ...view(x),
+      pressed: x.id === selId ? "true" : "false",
+      bg: x.id === selId ? "#F6F6F6" : "#FFFFFF",
+      pick: () => selectVisit(x.id),
     }));
     const names = ["Upcoming", "Past", "Cancelled"];
     const tabs = names.map((l, i) => {
@@ -124,16 +62,31 @@ class Logic extends DCLogic {
         bg: on ? "#000000" : "transparent",
         fg: on ? "#FFFFFF" : "#000000",
         weight: on ? "700" : "600",
-        pick: () => this.setState({ tab: i, sel: 0 }),
+        pick: () => {
+          this.setState({ tab: i });
+          if (groups[i][0]) selectVisit(groups[i][0].id);
+        },
       };
     });
-    const sel = list[si];
-    return { tabs, rows, sel, isLive: sel.k === "live", isPast: sel.k === "past", isUpcoming: sel.k === "up" };
+    const selVisit = list.find((x) => x.id === selId);
+    const sel = selVisit ? view(selVisit) : null;
+    return {
+      tabs,
+      rows,
+      sel: sel ?? { av: "/images/amma.png", when: "", who: "", time: "", amount: "" },
+      empty: !sel,
+      isLive: sel?.k === "live",
+      isPast: sel?.k === "past",
+      isUpcoming: sel?.k === "up",
+      liveDone: liveTasks(demo).label,
+      rebook: () => selVisit && selectCaregiver(selVisit.caregiverId),
+    };
   }
 }
 
 export default function VisitsScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo }, persist: "visits" });
   return (
     <div
       style={{
@@ -254,6 +207,11 @@ export default function VisitsScreen() {
               <span>Amount</span>
               <span>Status</span>
             </div>{" "}
+            {v.empty ? (
+              <div style={{ padding: "28px 16px", fontSize: "14px", color: "#545454", textAlign: "center" }}>
+                No visits here yet.
+              </div>
+            ) : null}
             {v.rows.map((r: any, i2: number) => (
               <Fragment key={i2}>
                 <button
@@ -325,191 +283,145 @@ export default function VisitsScreen() {
               </Fragment>
             ))}
           </section>{" "}
-          <aside
-            aria-label="Selected visit"
-            style={{
-              flex: "1 1 340px",
-              maxWidth: "420px",
-              minWidth: "0",
-              border: "1px solid #E2E2E2",
-              borderRadius: "16px",
-              padding: "18px",
-              boxSizing: "border-box",
-              display: "flex",
-              flexDirection: "column",
-              gap: "14px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <img
-                src={v.sel.av}
-                alt=""
-                style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }}
-              />
-              <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ fontSize: "16px", fontWeight: "800" }}>{v.sel.when}</span>
-                <span style={{ fontSize: "13px", color: "#545454" }}>
-                  {v.sel.who}
-                  {" · "}
-                  {v.sel.time}
-                </span>
-              </span>
-            </div>{" "}
-            {v.isLive ? (
-              <>
-                <div
-                  style={{
-                    borderRadius: "12px",
-                    background: "#E6F4EC",
-                    padding: "14px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      color: "#05663A",
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    <span style={{ width: "8px", height: "8px", borderRadius: "4px", background: "#05944F" }}></span>
-                    Live · checked in 9:02
+          {v.empty ? null : (
+            <aside
+              aria-label="Selected visit"
+              style={{
+                flex: "1 1 340px",
+                maxWidth: "420px",
+                minWidth: "0",
+                border: "1px solid #E2E2E2",
+                borderRadius: "16px",
+                padding: "18px",
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <img
+                  src={v.sel.av}
+                  alt=""
+                  style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }}
+                />
+                <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontSize: "16px", fontWeight: "800" }}>{v.sel.when}</span>
+                  <span style={{ fontSize: "13px", color: "#545454" }}>
+                    {v.sel.who}
+                    {" · "}
+                    {v.sel.time}
                   </span>
-                  <span style={{ fontSize: "14px", fontWeight: "700" }}>3 of 5 tasks done</span>
-                  <div style={{ height: "6px", borderRadius: "3px", background: "#C9E6D5", display: "flex" }}>
-                    <span style={{ width: "60%", borderRadius: "3px", background: "#05944F" }}></span>
-                  </div>
-                </div>{" "}
-                <Link
-                  href="/live-visit"
-                  style={{
-                    height: "40px",
-                    borderRadius: "20px",
-                    background: "#000000",
-                    color: "#FFFFFF",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "14px",
-                    fontWeight: "700",
-                  }}
-                >
-                  Follow live
-                </Link>{" "}
-                <Link
-                  href="/on-the-way"
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "700",
-                    textAlign: "center",
-                    textDecoration: "underline",
-                    marginTop: "-6px",
-                  }}
-                >
-                  {"See her route & visit code"}
-                </Link>
-              </>
-            ) : null}{" "}
-            {v.isPast ? (
-              <>
-                <div style={{ border: "1px solid #E2E2E2", borderRadius: "12px", overflow: "hidden" }}>
+                </span>
+              </div>{" "}
+              {v.isLive ? (
+                <>
                   <div
-                    style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", fontSize: "14px" }}
+                    style={{
+                      borderRadius: "12px",
+                      background: "#E6F4EC",
+                      padding: "14px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
                   >
-                    <span style={{ color: "#545454" }}>Paid</span>
-                    <span style={{ fontWeight: "700" }}>{v.sel.amount}</span>
-                  </div>
-                  <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
-                  <div
-                    style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", fontSize: "14px" }}
-                  >
-                    <span style={{ color: "#545454" }}>Your rating</span>
-                    <span style={{ fontWeight: "700" }}>★★★★★</span>
-                  </div>
-                </div>{" "}
-                <Link
-                  href="/visit-report"
-                  style={{
-                    height: "40px",
-                    borderRadius: "20px",
-                    background: "#000000",
-                    color: "#FFFFFF",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "14px",
-                    fontWeight: "700",
-                  }}
-                >
-                  {"Visit report & receipt"}
-                </Link>{" "}
-                <Link
-                  href="/rebook"
-                  style={{
-                    height: "38px",
-                    borderRadius: "19px",
-                    background: "#EEEEEE",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    marginTop: "-6px",
-                  }}
-                >
-                  Book again
-                </Link>
-              </>
-            ) : null}{" "}
-            {v.isUpcoming ? (
-              <>
-                <div
-                  style={{
-                    borderRadius: "12px",
-                    background: "#EAF0FD",
-                    color: "#1A4FB5",
-                    padding: "12px 14px",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    lineHeight: "1.45",
-                  }}
-                >
-                  {v.sel.amount}
-                  {" held in escrow · free to change until 24 hrs before"}
-                </div>{" "}
-                <Link
-                  href="/care-plan"
-                  style={{
-                    height: "40px",
-                    borderRadius: "20px",
-                    background: "#000000",
-                    color: "#FFFFFF",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "14px",
-                    fontWeight: "700",
-                  }}
-                >
-                  {"Care plan & tasks"}
-                </Link>{" "}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                    gap: "8px",
-                    marginTop: "-6px",
-                  }}
-                >
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        fontSize: "12px",
+                        fontWeight: "700",
+                        color: "#05663A",
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      <span style={{ width: "8px", height: "8px", borderRadius: "4px", background: "#05944F" }}></span>
+                      Live · checked in 9:02
+                    </span>
+                    <span style={{ fontSize: "14px", fontWeight: "700" }}>{v.liveDone}</span>
+                    <div style={{ height: "6px", borderRadius: "3px", background: "#C9E6D5", display: "flex" }}>
+                      <span style={{ width: "60%", borderRadius: "3px", background: "#05944F" }}></span>
+                    </div>
+                  </div>{" "}
                   <Link
-                    href="/reschedule"
+                    href="/live-visit"
+                    style={{
+                      height: "40px",
+                      borderRadius: "20px",
+                      background: "#000000",
+                      color: "#FFFFFF",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "14px",
+                      fontWeight: "700",
+                    }}
+                  >
+                    Follow live
+                  </Link>{" "}
+                  <Link
+                    href="/on-the-way"
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: "700",
+                      textAlign: "center",
+                      textDecoration: "underline",
+                      marginTop: "-6px",
+                    }}
+                  >
+                    {"See her route & visit code"}
+                  </Link>
+                </>
+              ) : null}{" "}
+              {v.isPast ? (
+                <>
+                  <div style={{ border: "1px solid #E2E2E2", borderRadius: "12px", overflow: "hidden" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "12px 14px",
+                        fontSize: "14px",
+                      }}
+                    >
+                      <span style={{ color: "#545454" }}>{v.sel.paidLabel}</span>
+                      <span style={{ fontWeight: "700" }}>{v.sel.amount}</span>
+                    </div>
+                    <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "12px 14px",
+                        fontSize: "14px",
+                      }}
+                    >
+                      <span style={{ color: "#545454" }}>Your rating</span>
+                      <span style={{ fontWeight: "700" }}>{v.sel.rating}</span>
+                    </div>
+                  </div>{" "}
+                  <Link
+                    href="/visit-report"
+                    style={{
+                      height: "40px",
+                      borderRadius: "20px",
+                      background: "#000000",
+                      color: "#FFFFFF",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "14px",
+                      fontWeight: "700",
+                    }}
+                  >
+                    {"Visit report & receipt"}
+                  </Link>{" "}
+                  <Link
+                    href="/rebook"
+                    onClick={v.rebook}
                     style={{
                       height: "38px",
                       borderRadius: "19px",
@@ -519,41 +431,102 @@ export default function VisitsScreen() {
                       justifyContent: "center",
                       fontSize: "14px",
                       fontWeight: "600",
+                      marginTop: "-6px",
                     }}
                   >
-                    Reschedule
+                    Book again
                   </Link>
-                  <Link
-                    href="/cancel-booking"
+                </>
+              ) : null}{" "}
+              {v.isUpcoming ? (
+                <>
+                  <div
                     style={{
-                      height: "38px",
-                      borderRadius: "19px",
-                      background: "#EEEEEE",
+                      borderRadius: "12px",
+                      background: "#EAF0FD",
+                      color: "#1A4FB5",
+                      padding: "12px 14px",
+                      fontSize: "13px",
+                      fontWeight: "600",
+                      lineHeight: "1.45",
+                    }}
+                  >
+                    {v.sel.amount}
+                    {" held in escrow · free to change until 24 hrs before"}
+                  </div>{" "}
+                  <Link
+                    href="/care-plan"
+                    style={{
+                      height: "40px",
+                      borderRadius: "20px",
+                      background: "#000000",
+                      color: "#FFFFFF",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: "14px",
-                      fontWeight: "600",
+                      fontWeight: "700",
                     }}
                   >
-                    Cancel
+                    {"Care plan & tasks"}
+                  </Link>{" "}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                      gap: "8px",
+                      marginTop: "-6px",
+                    }}
+                  >
+                    <Link
+                      href="/reschedule"
+                      style={{
+                        height: "38px",
+                        borderRadius: "19px",
+                        background: "#EEEEEE",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                      }}
+                    >
+                      Reschedule
+                    </Link>
+                    <Link
+                      href="/cancel-booking"
+                      style={{
+                        height: "38px",
+                        borderRadius: "19px",
+                        background: "#EEEEEE",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                      }}
+                    >
+                      Cancel
+                    </Link>
+                  </div>{" "}
+                  {v.sel.weekly ? (
+                    <Link
+                      href="/weekly-care"
+                      style={{ fontSize: "13px", fontWeight: "700", textAlign: "center", textDecoration: "underline" }}
+                    >
+                      Manage weekly care
+                    </Link>
+                  ) : null}{" "}
+                  <Link
+                    href="/booking-status"
+                    style={{ fontSize: "13px", fontWeight: "700", textAlign: "center", textDecoration: "underline" }}
+                  >
+                    Booking status
                   </Link>
-                </div>{" "}
-                <Link
-                  href="/weekly-care"
-                  style={{ fontSize: "13px", fontWeight: "700", textAlign: "center", textDecoration: "underline" }}
-                >
-                  Manage weekly care
-                </Link>{" "}
-                <Link
-                  href="/booking-status"
-                  style={{ fontSize: "13px", fontWeight: "700", textAlign: "center", textDecoration: "underline" }}
-                >
-                  Booking status
-                </Link>
-              </>
-            ) : null}
-          </aside>
+                </>
+              ) : null}
+            </aside>
+          )}
         </div>
       </main>
     </div>

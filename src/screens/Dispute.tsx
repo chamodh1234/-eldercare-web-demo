@@ -4,13 +4,27 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { openDispute } from "@/lib/actions";
+import { lkr } from "@/lib/format";
+import { reportVisit, visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
+
+const REASONS = [
+  ["Arrived late", "Check-in after the booked time"],
+  ["Left early", "Checked out before the booked time"],
+  ["Tasks not done", "Some tasks were skipped"],
+  ["Times look wrong", "Check-in or out doesn't match"],
+  ["Charged the wrong amount", ""],
+];
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { r: 2, a: 1 };
+    this.state = { r: 2, a: 1, note: "Lunch wasn't ready when I called at 12:15 and the sheets weren't changed." };
   }
   renderVals() {
+    const { demo } = this.props;
+    const { v: visit, cg, day, amount } = visitView(reportVisit(demo));
     const radio = (key, list) =>
       list.map((r, i) => {
         const on = this.state[key] === i;
@@ -25,10 +39,10 @@ class Logic extends DCLogic {
           pick: () => this.setState({ [key]: i }),
         };
       });
-    const A = [
-      ["LKR 600", "Part refund"],
-      ["LKR 1,200", "1 hour back"],
-      ["Free re-visit", "Nirmala comes again"],
+    const A: [string, string, number][] = [
+      [lkr(visit.rate / 2), "Part refund", visit.rate / 2],
+      [lkr(visit.rate), "1 hour back", visit.rate],
+      ["Free re-visit", `${cg.first} comes again`, 0],
     ];
     const asks = A.map((a, i) => {
       const on = this.state.a === i;
@@ -42,20 +56,20 @@ class Logic extends DCLogic {
       };
     });
     return {
-      reasons: radio("r", [
-        ["Arrived late", "Check-in after the booked time"],
-        ["Left early", "Checked out before the booked time"],
-        ["Tasks not done", "Some tasks were skipped"],
-        ["Times look wrong", "Check-in or out doesn't match"],
-        ["Charged the wrong amount", ""],
-      ]),
+      reasons: radio("r", REASONS),
       asks,
+      sub: `${day} · ${cg.name} · ${amount} stays on hold until this is sorted`,
+      sendLabel: `Send to ${cg.first}`,
+      note: this.state.note,
+      setNote: (e) => this.setState({ note: e.target.value }),
+      send: () => openDispute(visit.id, REASONS[this.state.r][0], A[this.state.a][2], this.state.note),
     };
   }
 }
 
 export default function DisputeScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{
@@ -125,9 +139,7 @@ export default function DisputeScreen() {
               >
                 Problem with the visit
               </h1>
-              <span style={{ fontSize: "15px", color: "#545454" }}>
-                Sat 10 Oct · Nirmala Perera · LKR 3,960 stays on hold until this is sorted
-              </span>
+              <span style={{ fontSize: "15px", color: "#545454" }}>{v.sub}</span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", alignItems: "flex-start" }}>
               <div style={{ flex: "1 1 300px", minWidth: "0", display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -386,12 +398,14 @@ export default function DisputeScreen() {
                   font: "500 14px var(--font-figtree), sans-serif",
                   lineHeight: "1.45",
                 }}
-                defaultValue="Lunch wasn't ready when I called at 12:15 and the sheets weren't changed."
+                value={v.note}
+                onChange={v.setNote}
               />
             </label>
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
               <Link
                 href="/dispute-open"
+                onClick={v.send}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -408,7 +422,7 @@ export default function DisputeScreen() {
                   whiteSpace: "nowrap",
                 }}
               >
-                Send to Nirmala
+                {v.sendLabel}
               </Link>
               <span style={{ fontSize: "12px", color: "#545454" }}>She has 48 hrs to reply · then Gloocan decides</span>
             </div>

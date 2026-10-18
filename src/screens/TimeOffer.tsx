@@ -1,5 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { toast } from "@/components/Toaster";
+import { moveVisit, selectVisit } from "@/lib/actions";
+
+// The Sat 17 visit Nirmala asked to move (the seed's "v-1017").
+const OFFER = { visitId: "v-1017", date: "2026-10-18", start: "2:00 PM" };
 
 export default function TimeOfferScreen() {
   return (
@@ -197,6 +204,7 @@ export default function TimeOfferScreen() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <Link
                 href="/reschedule-confirmed"
+                onClick={() => moveVisit(OFFER.visitId, OFFER.date, OFFER.start)}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -217,6 +225,7 @@ export default function TimeOfferScreen() {
               </Link>
               <Link
                 href="/reschedule"
+                onClick={() => selectVisit(OFFER.visitId)}
                 style={{
                   height: "40px",
                   padding: "0 18px",
@@ -237,6 +246,7 @@ export default function TimeOfferScreen() {
               </Link>
               <Link
                 href="/visits"
+                onClick={() => toast("Kept Sat 17 · 9:00. Nirmala has been told.")}
                 style={{
                   height: "40px",
                   padding: "0 18px",

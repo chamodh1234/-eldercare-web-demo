@@ -1,7 +1,27 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { toast } from "@/components/Toaster";
+import { downloadFile, visitIcs } from "@/lib/download";
+import { lkr } from "@/lib/format";
+import { backups, selectedVisit, visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 export default function ConfirmedScreen() {
+  const demo = useDemo();
+  const { v, cg, day } = visitView(selectedVisit(demo));
+  const amount = lkr(v.held ?? v.amount);
+  const others = backups(demo, cg.id);
+  const addToCalendar = (e: React.MouseEvent) => {
+    e.preventDefault();
+    downloadFile(
+      "gloocan-visit.ics",
+      visitIcs(`${v.help} with ${cg.first} for Amma`, v.date, v.start, v.end, "24/3 Kirula Road, Colombo 05"),
+      "text/calendar",
+    );
+    toast("Calendar file downloaded");
+  };
   return (
     <div
       style={{
@@ -31,7 +51,7 @@ export default function ConfirmedScreen() {
         <div style={{ flex: "999 1 480px", minWidth: "0", display: "flex", flexDirection: "column", gap: "22px" }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             <img
-              src="/images/nirmala.png"
+              src={cg.avatar}
               alt=""
               style={{
                 width: "60px",
@@ -85,7 +105,7 @@ export default function ConfirmedScreen() {
             <h1
               style={{ margin: "0", fontSize: "36px", lineHeight: "1.05", fontWeight: "800", letterSpacing: "-0.03em" }}
             >
-              {"We've asked Nirmala"}
+              {`We've asked ${cg.first}`}
             </h1>{" "}
             <p style={{ margin: "0", fontSize: "15px", lineHeight: "1.5", color: "#333333" }}>
               {"She usually replies within 2 hours. We'll message you the moment she accepts."}
@@ -129,8 +149,10 @@ export default function ConfirmedScreen() {
                 </svg>
               </span>
               <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ fontSize: "14px", fontWeight: "700" }}>LKR 3,960 held</span>
-                <span style={{ fontSize: "13px", color: "#545454" }}>Visa ·· 4417 · today 3:24 PM</span>
+                <span style={{ fontSize: "14px", fontWeight: "700" }}>{amount} held</span>
+                <span
+                  style={{ fontSize: "13px", color: "#545454" }}
+                >{`${v.card} · ${v.requestedAt.toLowerCase()}`}</span>
               </span>
             </li>{" "}
             <li
@@ -157,9 +179,9 @@ export default function ConfirmedScreen() {
                 <span style={{ width: "10px", height: "10px", borderRadius: "5px", background: "#000000" }}></span>
               </span>
               <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ fontSize: "14px", fontWeight: "700" }}>Waiting for Nirmala</span>
+                <span style={{ fontSize: "14px", fontWeight: "700" }}>Waiting for {cg.first}</span>
                 <span style={{ fontSize: "13px", color: "#545454" }}>
-                  {"If she can't, we'll ask Shanthi, then Mala"}
+                  {`If she can't, we'll ask ${others.join(", then ")}`}
                 </span>
               </span>
             </li>{" "}
@@ -189,7 +211,9 @@ export default function ConfirmedScreen() {
                 3
               </span>
               <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ fontSize: "14px", fontWeight: "700", color: "#333333" }}>Visit · Sat 17 Oct, 9:00</span>
+                <span
+                  style={{ fontSize: "14px", fontWeight: "700", color: "#333333" }}
+                >{`Visit · ${day}, ${v.start}`}</span>
                 <span style={{ fontSize: "13px", color: "#545454" }}>Follow it live here or in the app</span>
               </span>
             </li>{" "}
@@ -220,7 +244,7 @@ export default function ConfirmedScreen() {
               </span>
               <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
                 <span style={{ fontSize: "14px", fontWeight: "700", color: "#333333" }}>
-                  You approve · Nirmala is paid
+                  You approve · {cg.first} is paid
                 </span>
                 <span style={{ fontSize: "13px", color: "#545454" }}>Or it auto-approves 24 hrs after check-out</span>
               </span>
@@ -260,6 +284,7 @@ export default function ConfirmedScreen() {
             </Link>{" "}
             <Link
               href="/confirmed"
+              onClick={addToCalendar}
               style={{
                 height: "44px",
                 padding: "0 18px",

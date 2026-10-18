@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
+import { useRouter } from "next/navigation";
+import { selectCaregiver } from "@/lib/actions";
 
 export default function MainScreen() {
+  const router = useRouter();
   return (
     <div
       style={{
@@ -48,6 +53,10 @@ export default function MainScreen() {
                 visit is done.
               </p>{" "}
               <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  router.push("/search");
+                }}
                 style={{
                   background: "#FFFFFF",
                   color: "#000000",
@@ -602,6 +611,7 @@ export default function MainScreen() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}>
             <Link
               href="/profile"
+              onClick={() => selectCaregiver("nirmala")}
               style={{
                 background: "#FFFFFF",
                 borderRadius: "16px",
@@ -641,6 +651,7 @@ export default function MainScreen() {
             </Link>{" "}
             <Link
               href="/profile"
+              onClick={() => selectCaregiver("mala")}
               style={{
                 background: "#FFFFFF",
                 borderRadius: "16px",
@@ -680,6 +691,7 @@ export default function MainScreen() {
             </Link>{" "}
             <Link
               href="/profile"
+              onClick={() => selectCaregiver("shanthi")}
               style={{
                 background: "#FFFFFF",
                 borderRadius: "16px",
@@ -719,6 +731,7 @@ export default function MainScreen() {
             </Link>{" "}
             <Link
               href="/profile"
+              onClick={() => selectCaregiver("priya")}
               style={{
                 background: "#FFFFFF",
                 borderRadius: "16px",
@@ -957,8 +970,8 @@ export default function MainScreen() {
           <Link href="/#safety">Safety</Link>
           <Link href="/#pricing">Pricing</Link>
           <Link href="/help-centre">Help</Link>
-          <Link href="/">Privacy</Link>
-          <Link href="/">සිංහල · தமிழ்</Link>
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/language">සිංහල · தமிழ்</Link>
         </div>
       </footer>
     </div>

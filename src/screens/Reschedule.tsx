@@ -4,30 +4,31 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/Toaster";
+import { moveVisit } from "@/lib/actions";
+import { addDays, dayLabel, dayNum, dow, lkr, TODAY } from "@/lib/format";
+import { selectedVisit, visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
+
+const TIMES = ["8:00", "9:00", "10:00", "2:00 PM", "3:00 PM"];
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { d: 2, t: 2 };
+    this.state = { d: 2, t: 2, msg: "Amma has a clinic visit on Saturday morning." };
   }
   renderVals() {
-    const D = [
-      ["Fri", 16],
-      ["Sat", 17],
-      ["Sun", 18],
-      ["Mon", 19],
-      ["Tue", 20],
-      ["Wed", 21],
-      ["Thu", 22],
-    ];
-    const T = ["8:00", "9:00", "10:00", "2:00 PM", "3:00 PM"];
+    const { demo, router } = this.props;
+    const { v: visit, cg, day, time } = visitView(selectedVisit(demo));
+    const D = Array.from({ length: 7 }, (_, i) => addDays(TODAY, i + 1));
     const busy = [3];
-    const days = D.map((d, i) => {
+    const days = D.map((iso, i) => {
       const on = this.state.d === i;
       const off = i >= 4;
       return {
-        dow: d[0],
-        num: d[1],
+        dow: dow(iso),
+        num: dayNum(iso),
         pressed: on ? "true" : "false",
         bg: on ? "#000000" : off ? "#F6F6F6" : "#EEEEEE",
         fg: on ? "#FFFFFF" : off ? "#A6A6A6" : "#000000",
@@ -36,7 +37,7 @@ class Logic extends DCLogic {
         },
       };
     });
-    const times = T.map((t, i) => {
+    const times = TIMES.map((t, i) => {
       const on = this.state.t === i;
       const b = busy.includes(i);
       return {
@@ -50,12 +51,34 @@ class Logic extends DCLogic {
         },
       };
     });
-    return { days, times, newWhen: D[this.state.d][0] + " " + D[this.state.d][1] + " Oct · " + T[this.state.t] };
+    const date = D[this.state.d];
+    const start = TIMES[this.state.t];
+    return {
+      days,
+      times,
+      newWhen: dayLabel(date) + " · " + start,
+      current: `${day} · ${time} · ${cg.first}`,
+      was: `${day} · ${visit.start}`,
+      offNote: `New day · greyed days ${cg.first} is off`,
+      stays: `${lkr(visit.held ?? visit.amount)} stays in escrow`,
+      msgLabel: `Message to ${cg.first} · optional`,
+      sendLabel: `Send to ${cg.first}`,
+      msg: this.state.msg,
+      setMsg: (e) => this.setState({ msg: e.target.value }),
+      send: (e) => {
+        e.preventDefault();
+        moveVisit(visit.id, date, start, this.state.msg);
+        toast(`Moved to ${dayLabel(date)} · ${start}. ${cg.first} has been told.`);
+        router.push("/visits");
+      },
+    };
   }
 }
 
 export default function RescheduleScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { demo, router } });
   return (
     <div
       style={{
@@ -120,7 +143,7 @@ export default function RescheduleScreen() {
           <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
             <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.02em" }}>Change date or time</span>
-              <span style={{ fontSize: "14px", color: "#545454" }}>Sat 17 Oct · 9:00 – 12:00 · Nirmala</span>
+              <span style={{ fontSize: "14px", color: "#545454" }}>{v.current}</span>
             </span>
             <Link
               href="/visits"
@@ -151,7 +174,7 @@ export default function RescheduleScreen() {
             </Link>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <span style={{ fontSize: "13px", fontWeight: "600" }}>New day · greyed days Nirmala is off</span>
+            <span style={{ fontSize: "13px", fontWeight: "600" }}>{v.offNote}</span>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px" }}>
               {v.days.map((d: any, i1: number) => (
                 <Fragment key={i1}>
@@ -215,7 +238,7 @@ export default function RescheduleScreen() {
               }}
             >
               <span style={{ color: "#545454" }}>Was</span>
-              <span style={{ fontWeight: "700", textAlign: "right" }}>Sat 17 Oct · 9:00</span>
+              <span style={{ fontWeight: "700", textAlign: "right" }}>{v.was}</span>
             </div>
             <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
             <div
@@ -244,15 +267,16 @@ export default function RescheduleScreen() {
               <span style={{ fontWeight: "700", textAlign: "right" }}>
                 No change
                 <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                  LKR 3,960 stays in escrow
+                  {v.stays}
                 </span>
               </span>
             </div>
           </div>
           <label style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" }}>
-            <span style={{ fontSize: "13px", fontWeight: "600" }}>Message to Nirmala · optional</span>
+            <span style={{ fontSize: "13px", fontWeight: "600" }}>{v.msgLabel}</span>
             <input
-              defaultValue="Amma has a clinic visit on Saturday morning."
+              value={v.msg}
+              onChange={v.setMsg}
               style={{
                 height: "44px",
                 border: "1px solid #E2E2E2",
@@ -290,6 +314,7 @@ export default function RescheduleScreen() {
             </Link>
             <Link
               href="/visits"
+              onClick={v.send}
               style={{
                 height: "44px",
                 padding: "0 22px",
@@ -306,7 +331,7 @@ export default function RescheduleScreen() {
                 whiteSpace: "nowrap",
               }}
             >
-              Send to Nirmala
+              {v.sendLabel}
             </Link>
           </div>
         </div>

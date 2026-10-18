@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { bookDraft, cardLabel, cardShort } from "@/lib/actions";
+import { draftSummary } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -10,32 +14,52 @@ class Logic extends DCLogic {
     this.state = { m: 0 };
   }
   renderVals() {
-    const radio = (key, list) =>
-      list.map((r, i) => {
-        const on = this.state[key] === i;
-        return {
-          title: r[0],
-          note: r[1] || "",
-          checked: on ? "true" : "false",
-          sep: i === 0 ? "none" : "1px solid #E2E2E2",
-          bg: on ? "#F6F6F6" : "#FFFFFF",
-          ring: on ? "2px solid #000000" : "2px solid #A6A6A6",
-          dot: on ? "#000000" : "transparent",
-          pick: () => this.setState({ [key]: i }),
-        };
-      });
+    const { demo, router } = this.props;
+    const declined = demo.cards.find((c) => c.id === demo.checkoutCard) ?? demo.cards[0];
+    const list = [
+      ...demo.cards
+        .filter((c) => c.id !== declined?.id)
+        .map((c) => [cardLabel(c), `${c.bank} · expires ${c.expiry}`, cardShort(c)]),
+      ["Card from abroad", "AUD, GBP or USD", "Card from abroad"],
+      ["Add a new card", "", ""],
+    ];
+    const methods = list.map((r, i) => {
+      const on = this.state.m === i;
+      return {
+        title: r[0],
+        note: r[1] || "",
+        checked: on ? "true" : "false",
+        sep: i === 0 ? "none" : "1px solid #E2E2E2",
+        bg: on ? "#F6F6F6" : "#FFFFFF",
+        ring: on ? "2px solid #000000" : "2px solid #A6A6A6",
+        dot: on ? "#000000" : "transparent",
+        pick: () => this.setState({ m: i }),
+      };
+    });
+    const s = draftSummary(demo);
+    const chosen = list[Math.min(this.state.m, list.length - 1)];
     return {
-      methods: radio("m", [
-        ["Mastercard ·· 9012", "Sampath Bank · expires 01/27"],
-        ["Card from abroad", "AUD, GBP or USD"],
-        ["Add a new card", ""],
-      ]),
+      methods,
+      s,
+      declined: declined ? `${cardShort(declined).replace("MC", "Mastercard")} was declined` : "Your card was declined",
+      tryAgain: declined ? `Try ${cardShort(declined).split(" ")[0].replace("MC", "Mastercard")} again` : "Try again",
+      body: `Your bank didn't approve the hold of ${s.total}. Nothing was charged. This often happens with a new or foreign card, or a daily limit.`,
+      saved: `Your booking with ${s.cg.first} is saved for 15 minutes`,
+      payLabel: `Pay ${s.total} & send request`,
+      pay: (e) => {
+        e.preventDefault();
+        if (!chosen[2]) return router.push("/payment-methods");
+        bookDraft(chosen[2]);
+        router.push("/confirmed");
+      },
     };
   }
 }
 
 export default function PaymentFailedScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { demo, router } });
   return (
     <div
       style={{
@@ -171,12 +195,8 @@ export default function PaymentFailedScreen() {
                 </svg>
               </span>
               <span style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span style={{ fontSize: "17px", fontWeight: "800", color: "#C11500" }}>Visa ·· 4417 was declined</span>
-                <span style={{ fontSize: "14px", color: "#333333", lineHeight: "1.5" }}>
-                  {
-                    "Your bank didn't approve the hold of LKR 3,960. Nothing was charged. This often happens with a new or foreign card, or a daily limit."
-                  }
-                </span>
+                <span style={{ fontSize: "17px", fontWeight: "800", color: "#C11500" }}>{v.declined}</span>
+                <span style={{ fontSize: "14px", color: "#333333", lineHeight: "1.5" }}>{v.body}</span>
               </span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -191,9 +211,7 @@ export default function PaymentFailedScreen() {
               >
                 Try another way to pay
               </h1>
-              <span style={{ fontSize: "15px", color: "#545454" }}>
-                Your booking with Nirmala is saved for 15 minutes
-              </span>
+              <span style={{ fontSize: "15px", color: "#545454" }}>{v.saved}</span>
             </div>
             <div
               role="radiogroup"
@@ -250,6 +268,7 @@ export default function PaymentFailedScreen() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <Link
                 href="/confirmed"
+                onClick={v.pay}
                 style={{
                   height: "44px",
                   padding: "0 22px",
@@ -266,7 +285,7 @@ export default function PaymentFailedScreen() {
                   whiteSpace: "nowrap",
                 }}
               >
-                {"Pay LKR 3,960 & send request"}
+                {v.payLabel}
               </Link>
               <Link
                 href="/checkout"
@@ -286,7 +305,7 @@ export default function PaymentFailedScreen() {
                   whiteSpace: "nowrap",
                 }}
               >
-                Try Visa again
+                {v.tryAgain}
               </Link>
             </div>
             <span style={{ fontSize: "13px", color: "#545454" }}>
@@ -324,7 +343,7 @@ export default function PaymentFailedScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Caregiver</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>Nirmala Perera</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{v.s.cg.name}</span>
               </div>
               <div style={{ height: "1px", background: "#E2E2E2", marginLeft: "16px" }}></div>
               <div
@@ -338,9 +357,9 @@ export default function PaymentFailedScreen() {
               >
                 <span style={{ color: "#545454" }}>When</span>
                 <span style={{ fontWeight: "700", textAlign: "right" }}>
-                  Sat 17 Oct
+                  {v.s.when}
                   <span style={{ display: "block", fontSize: "12px", fontWeight: "500", color: "#545454" }}>
-                    9:00 – 12:00
+                    {v.s.time}
                   </span>
                 </span>
               </div>
@@ -355,7 +374,7 @@ export default function PaymentFailedScreen() {
                 }}
               >
                 <span style={{ color: "#545454" }}>Total</span>
-                <span style={{ fontWeight: "700", textAlign: "right" }}>LKR 3,960</span>
+                <span style={{ fontWeight: "700", textAlign: "right" }}>{v.s.total}</span>
               </div>
             </div>
             <span style={{ fontSize: "12px", color: "#545454" }}>Held until 3:39 PM</span>

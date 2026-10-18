@@ -4,6 +4,9 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { approveVisit, selectVisit } from "@/lib/actions";
+import { reportVisit, visitView } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -11,10 +14,13 @@ class Logic extends DCLogic {
     this.state = { rating: 5, tags: ["Patient", "Kept me updated"] };
   }
   renderVals() {
+    const { demo } = this.props;
+    const { v: visit, cg, day, time, sub } = visitView(reportVisit(demo));
+    const rating = visit.rating ?? this.state.rating;
     const stars = [1, 2, 3, 4, 5].map((n) => ({
       label: n + " star" + (n > 1 ? "s" : ""),
-      checked: this.state.rating === n ? "true" : "false",
-      color: n <= this.state.rating ? "#000000" : "#CBCBCB",
+      checked: rating === n ? "true" : "false",
+      color: n <= rating ? "#000000" : "#CBCBCB",
       pick: () => this.setState({ rating: n }),
     }));
     const T = ["On time", "Patient", "Kept me updated", "Followed tasks", "Kind to Amma"];
@@ -28,12 +34,28 @@ class Logic extends DCLogic {
         flip: () => this.setState({ tags: on ? this.state.tags.filter((x) => x !== l) : [...this.state.tags, l] }),
       };
     });
-    return { stars, tags };
+    const paid = visit.status === "paid";
+    return {
+      stars,
+      tags,
+      finished: `Visit finished · ${visit.end}${/PM/.test(visit.end) ? "" : " PM"}`,
+      line: `${day} · ${cg.name} · ${visit.help}`,
+      time,
+      cg,
+      release: paid ? `Paid to ${cg.first}` : `Release to ${cg.first}`,
+      sub,
+      approveLabel: paid ? "Approved · add a tip" : "Approve & release",
+      approve: () => {
+        if (!paid) approveVisit(visit.id, rating, this.state.tags);
+        selectVisit(visit.id);
+      },
+    };
   }
 }
 
 export default function VisitReportScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{
@@ -101,7 +123,7 @@ export default function VisitReportScreen() {
                   color: "#05663A",
                 }}
               >
-                Visit finished · 12:04 PM
+                {v.finished}
               </span>{" "}
               <h1
                 style={{
@@ -114,7 +136,7 @@ export default function VisitReportScreen() {
               >
                 {"Amma's visit report"}
               </h1>{" "}
-              <span style={{ fontSize: "15px", color: "#545454" }}>Sat 10 Oct · Nirmala Perera · Companionship</span>
+              <span style={{ fontSize: "15px", color: "#545454" }}>{v.line}</span>
             </div>{" "}
             <div
               style={{
@@ -126,7 +148,7 @@ export default function VisitReportScreen() {
             >
               <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span style={{ fontSize: "12px", color: "#545454" }}>Time</span>
-                <span style={{ fontSize: "15px", fontWeight: "800" }}>9:02 – 12:04</span>
+                <span style={{ fontSize: "15px", fontWeight: "800" }}>{v.time}</span>
                 <span style={{ fontSize: "12px", color: "#545454" }}>GPS matched home</span>
               </div>{" "}
               <div
@@ -325,7 +347,7 @@ export default function VisitReportScreen() {
               </div>
             </section>{" "}
             <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <h2 style={{ margin: "0", fontSize: "16px", fontWeight: "800" }}>Note from Nirmala</h2>{" "}
+              <h2 style={{ margin: "0", fontSize: "16px", fontWeight: "800" }}>Note from {v.cg.first}</h2>{" "}
               <div
                 style={{
                   display: "flex",
@@ -422,11 +444,12 @@ export default function VisitReportScreen() {
                 alignItems: "baseline",
               }}
             >
-              <span style={{ fontSize: "14px", fontWeight: "700", color: "#1A4FB5" }}>Release to Nirmala</span>
-              <span style={{ fontSize: "18px", fontWeight: "800" }}>LKR 3,600</span>
+              <span style={{ fontSize: "14px", fontWeight: "700", color: "#1A4FB5" }}>{v.release}</span>
+              <span style={{ fontSize: "18px", fontWeight: "800" }}>{v.sub}</span>
             </div>{" "}
             <Link
               href="/add-tip"
+              onClick={v.approve}
               style={{
                 height: "44px",
                 borderRadius: "22px",
@@ -439,7 +462,7 @@ export default function VisitReportScreen() {
                 fontWeight: "700",
               }}
             >
-              {"Approve & release"}
+              {v.approveLabel}
             </Link>{" "}
             <Link
               href="/dispute"

@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { toast } from "@/components/Toaster";
+import { bookDraft, defaultCardLabel, draftFor } from "@/lib/actions";
+
+const DAY = "2026-10-17";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -19,7 +23,17 @@ class Logic extends DCLogic {
         flip: () => this.setState({ [k]: !on }),
       };
     };
-    return { all: tg("all"), cta: this.state.all ? "Send to all 3" : "Request Shanthi" };
+    const all = this.state.all;
+    return {
+      all: tg("all"),
+      cta: all ? "Send to all 3" : "Request Shanthi",
+      request: (id) => () => draftFor(id, DAY),
+      send: () => {
+        draftFor("shanthi", DAY);
+        bookDraft(defaultCardLabel());
+        toast(all ? "Sent to Shanthi, Mala and Priya · first to accept gets the visit" : "Request sent to Shanthi");
+      },
+    };
   }
 }
 
@@ -195,6 +209,7 @@ export default function RequestDeclinedScreen() {
                   </span>
                   <Link
                     href="/checkout"
+                    onClick={v.request("shanthi")}
                     style={{
                       height: "32px",
                       padding: "0 14px",
@@ -253,6 +268,7 @@ export default function RequestDeclinedScreen() {
                   </span>
                   <Link
                     href="/checkout"
+                    onClick={v.request("mala")}
                     style={{
                       height: "32px",
                       padding: "0 14px",
@@ -311,6 +327,7 @@ export default function RequestDeclinedScreen() {
                   </span>
                   <Link
                     href="/checkout"
+                    onClick={v.request("priya")}
                     style={{
                       height: "32px",
                       padding: "0 14px",
@@ -373,6 +390,7 @@ export default function RequestDeclinedScreen() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <Link
                 href="/booking-status"
+                onClick={v.send}
                 style={{
                   height: "44px",
                   padding: "0 22px",

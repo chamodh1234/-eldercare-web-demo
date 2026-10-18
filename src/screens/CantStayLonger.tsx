@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { approveExtension, declineExtension, openChat, requestExtension } from "@/lib/actions";
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
@@ -26,6 +27,14 @@ class Logic extends DCLogic {
         };
       });
     const B = ["Accept 30 min · LKR 660", "Ask Mala to cover", "Message Nirmala"];
+    const go = [
+      () => approveExtension(30),
+      () => requestExtension(60, "mala"),
+      () => {
+        declineExtension();
+        openChat("nirmala");
+      },
+    ];
     return {
       opts: radio("o", [
         ["Take the 30 minutes", "Nirmala stays until 12:30 PM · LKR 660"],
@@ -34,6 +43,7 @@ class Logic extends DCLogic {
       ]),
       cta: B[this.state.o],
       href: ["/visit-extended", "/more-time-waiting", "/messages"][this.state.o],
+      go: go[this.state.o],
     };
   }
 }
@@ -199,6 +209,7 @@ export default function CantStayLongerScreen() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <Link
                 href={v.href}
+                onClick={v.go}
                 style={{
                   height: "44px",
                   padding: "0 22px",

@@ -3,26 +3,50 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { useRouter } from "next/navigation";
+import { mutate } from "@/lib/store";
+
+const CODES: Record<string, { amount: number; note: string }> = {
+  WELCOME500: { amount: 500, note: "LKR 500 off your first booking · new families only" },
+  FRIEND1000: { amount: 1000, note: "LKR 1,000 off · from a friend's invite" },
+};
+const EXPIRED: Record<string, string> = { GLOOCAN50: "This code ended on 30 Sep. Try another one." };
 
 class Logic extends DCLogic {
   constructor(props: DCProps) {
     super(props);
-    this.state = { bad: false };
+    this.state = { code: "WELCOME500", tried: false };
   }
   renderVals() {
-    const b = this.state.bad;
+    const { router } = this.props;
+    const code = this.state.code.trim().toUpperCase();
+    const good = CODES[code];
+    const error =
+      EXPIRED[code] ?? (this.state.tried && !good ? "We don't recognise this code. Check it and try again." : "");
     return {
-      bad: b,
-      ok: !b,
-      code: b ? "GLOOCAN50" : "WELCOME500",
-      ring: b ? "#C11500" : "#000000",
-      flip: () => this.setState({ bad: !b }),
+      bad: !!error,
+      ok: !!good,
+      error,
+      note: good?.note ?? "",
+      code: this.state.code,
+      setCode: (e) => this.setState({ code: e.target.value, tried: false }),
+      ring: error ? "#C11500" : "#000000",
+      flip: () => this.setState({ code: code === "GLOOCAN50" ? "WELCOME500" : "GLOOCAN50", tried: false }),
+      apply: (e) => {
+        e.preventDefault();
+        if (!good) return this.setState({ tried: true });
+        mutate((d) => {
+          d.promo = { code, amount: good.amount };
+        });
+        router.push("/promo-applied");
+      },
     };
   }
 }
 
 export default function AddPromoScreen() {
-  const v = useLogic(Logic);
+  const router = useRouter();
+  const v = useLogic(Logic, { props: { router } });
   return (
     <div
       style={{
@@ -160,20 +184,32 @@ export default function AddPromoScreen() {
               <path d="M3 12V4h8l10 10-8 8z"></path>
               <circle cx="7.5" cy="8.5" r="1.5"></circle>
             </svg>
-            <span style={{ flex: "1", fontSize: "17px", fontWeight: "800", letterSpacing: "0.06em" }}>{v.code}</span>
+            <input
+              aria-label="Promo or referral code"
+              value={v.code}
+              onChange={v.setCode}
+              autoCapitalize="characters"
+              style={{
+                flex: "1",
+                minWidth: "0",
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                color: "#000000",
+                font: "800 17px var(--font-figtree), sans-serif",
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}
+            />
           </div>
           {v.bad ? (
             <>
-              <span style={{ marginTop: "-8px", fontSize: "13px", color: "#C11500" }}>
-                This code ended on 30 Sep. Try another one.
-              </span>
+              <span style={{ marginTop: "-8px", fontSize: "13px", color: "#C11500" }}>{v.error}</span>
             </>
           ) : null}
           {v.ok ? (
             <>
-              <span style={{ marginTop: "-8px", fontSize: "13px", color: "#05663A", fontWeight: "600" }}>
-                LKR 500 off your first booking · new families only
-              </span>
+              <span style={{ marginTop: "-8px", fontSize: "13px", color: "#05663A", fontWeight: "600" }}>{v.note}</span>
             </>
           ) : null}
           <button
@@ -217,6 +253,7 @@ export default function AddPromoScreen() {
               </Link>
               <Link
                 href="/promo-applied"
+                onClick={v.apply}
                 style={{
                   height: "44px",
                   padding: "0 22px",

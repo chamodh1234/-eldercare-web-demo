@@ -2,104 +2,115 @@
 
 import Link from "next/link";
 import { Fragment } from "react";
-import { DCLogic, useLogic, type DCProps } from "@/lib/logic";
+import { DCLogic, useLogic } from "@/lib/logic";
+import { addDays, dayLabel, dayNum, dow, fee, lkr, TODAY } from "@/lib/format";
+import { caregiver } from "@/lib/mock/caregivers";
+import { mutate, useDemo } from "@/lib/store";
+
+const HELPS = [
+  ["Companionship", "Company, walks, meals"],
+  ["Personal care", "Bathing, dressing, toilet"],
+  ["Memory care", "Dementia-trained caregivers"],
+];
+const TIMES = ["8:00", "9:00", "10:00", "2:00 PM"];
+const WEEK = ["M", "T", "W", "Th", "F", "Sa", "Su"];
 
 class Logic extends DCLogic {
-  constructor(props: DCProps) {
-    super(props);
-    this.state = { help: 0, day: 2, time: 1, hours: 3, repeat: false, wdays: ["M", "W", "F", "Sa"] };
-  }
   renderVals() {
-    const H = [
-      ["Companionship", "Company, walks, meals"],
-      ["Personal care", "Bathing, dressing, toilet"],
-      ["Memory care", "Dementia-trained caregivers"],
-    ];
-    const helps = H.map((h, i) => {
-      const on = this.state.help === i;
+    const { demo } = this.props;
+    const d = demo.draft;
+    const cg = caregiver(d.caregiverId);
+    const set = (patch) =>
+      mutate((s) => {
+        Object.assign(s.draft, patch);
+      });
+    const helps = HELPS.map((h) => {
+      const on = d.help === h[0];
       return {
         title: h[0],
         note: h[1],
         pressed: on ? "true" : "false",
         border: on ? "#000000" : "#E2E2E2",
-        pick: () => this.setState({ help: i }),
+        pick: () => set({ help: h[0] }),
       };
     });
-    const D = [
-      ["Thu", 15],
-      ["Fri", 16],
-      ["Sat", 17],
-      ["Sun", 18],
-      ["Mon", 19],
-      ["Tue", 20],
-      ["Wed", 21],
-    ];
-    const days = D.map((d, i) => {
-      const on = this.state.day === i;
+    const dates = Array.from({ length: 7 }, (_, i) => addDays(TODAY, i));
+    if (!dates.includes(d.date)) dates.push(d.date);
+    const days = dates.map((iso) => {
+      const on = d.date === iso;
       return {
-        dow: d[0],
-        num: d[1],
+        dow: dow(iso),
+        num: dayNum(iso),
         pressed: on ? "true" : "false",
         bg: on ? "#000000" : "#EEEEEE",
         fg: on ? "#FFFFFF" : "#000000",
-        pick: () => this.setState({ day: i }),
+        pick: () => set({ date: iso }),
       };
     });
-    const T = ["8:00", "9:00", "10:00", "2:00 PM"];
-    const times = T.map((t, i) => {
-      const on = this.state.time === i;
+    const T = TIMES.includes(d.start) ? TIMES : [...TIMES, d.start];
+    const times = T.map((t) => {
+      const on = d.start === t;
       return {
         label: t,
         pressed: on ? "true" : "false",
         bg: on ? "#000000" : "#EEEEEE",
         fg: on ? "#FFFFFF" : "#000000",
-        pick: () => this.setState({ time: i }),
+        pick: () => set({ start: t }),
       };
     });
-    const W = ["M", "T", "W", "Th", "F", "Sa", "Su"];
-    const wdays = W.map((w) => {
-      const on = this.state.wdays.includes(w);
+    const wdays = WEEK.map((w) => {
+      const on = d.weekdays.includes(w);
       return {
         label: w,
         pressed: on ? "true" : "false",
         bg: on ? "#000000" : "#EEEEEE",
         fg: on ? "#FFFFFF" : "#000000",
-        flip: () => this.setState({ wdays: on ? this.state.wdays.filter((x) => x !== w) : [...this.state.wdays, w] }),
+        flip: () => set({ weekdays: on ? d.weekdays.filter((x) => x !== w) : [...d.weekdays, w] }),
       };
     });
-    const h = this.state.hours;
-    const fmt = (n) => "LKR " + n.toLocaleString("en-US");
-    const visits = this.state.repeat ? this.state.wdays.length : 1;
-    const sub = h * 1200,
-      fee = Math.round(sub * 0.1);
-    const r = this.state.repeat;
+    const h = d.hours;
+    const r = d.weekly;
+    const visits = r ? Math.max(1, d.weekdays.length) : 1;
+    const sub = h * cg.rate;
+    const routine = demo.tasks
+      .filter((t) => t.kind === "routine")
+      .map((t) => `${t.short ?? t.title.toLowerCase()} ${t.time}`);
     return {
+      cg,
       helps,
       days,
       times,
       wdays,
       hours: h,
-      less: () => this.setState({ hours: Math.max(2, h - 1) }),
-      more: () => this.setState({ hours: Math.min(8, h + 1) }),
+      less: () => set({ hours: Math.max(2, h - 1) }),
+      more: () => set({ hours: Math.min(8, h + 1) }),
       repeat: {
         pressed: r ? "true" : "false",
         track: r ? "#05944F" : "#CBCBCB",
         align: r ? "flex-end" : "flex-start",
-        flip: () => this.setState({ repeat: !r }),
+        flip: () => set({ weekly: !r }),
       },
       repeatOn: r,
-      when:
-        (r ? "Weekly from " : "") + D[this.state.day][0] + " " + D[this.state.day][1] + " Oct · " + T[this.state.time],
-      sub: fmt(sub),
-      fee: fmt(fee),
+      when: (r ? "Weekly from " : "") + dayLabel(d.date).replace(/ \w+$/, "") + " Oct · " + d.start,
+      rateLine: ` hrs × ${lkr(cg.rate)}`,
+      sub: lkr(sub),
+      fee: lkr(fee(sub)),
       totalLabel: r ? "Per week (" + visits + " visits)" : "Total",
-      total: fmt((sub + fee) * visits),
+      total: lkr((sub + fee(sub)) * visits),
+      title: `Book ${cg.first} for Amma`,
+      sameTime: `Same time with ${cg.first} · paid week by week`,
+      whatDo: `What should ${cg.first} do?`,
+      until: `Nothing is charged until ${cg.first} accepts`,
+      routine: routine.length ? routine.join(" · ") : "No routine tasks yet",
+      note: d.note,
+      setNote: (e) => set({ note: e.target.value }),
     };
   }
 }
 
 export default function BookScreen() {
-  const v = useLogic(Logic);
+  const demo = useDemo();
+  const v = useLogic(Logic, { props: { demo } });
   return (
     <div
       style={{
@@ -243,7 +254,7 @@ export default function BookScreen() {
           <h1
             style={{ margin: "0", fontSize: "32px", lineHeight: "1.05", fontWeight: "800", letterSpacing: "-0.03em" }}
           >
-            Book Nirmala for Amma
+            {v.title}
           </h1>{" "}
           <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <h2
@@ -429,7 +440,7 @@ export default function BookScreen() {
             >
               <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
                 <span style={{ fontSize: "14px", fontWeight: "700" }}>Repeat every week</span>
-                <span style={{ fontSize: "13px", color: "#545454" }}>Same time with Nirmala · paid week by week</span>
+                <span style={{ fontSize: "13px", color: "#545454" }}>{v.sameTime}</span>
               </span>
               <span
                 style={{
@@ -486,7 +497,7 @@ export default function BookScreen() {
             ) : null}
           </section>{" "}
           <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>What should Nirmala do?</h2>{" "}
+            <h2 style={{ margin: "0", fontSize: "18px", fontWeight: "800" }}>{v.whatDo}</h2>{" "}
             <div style={{ border: "1px solid #E2E2E2", borderRadius: "14px", overflow: "hidden" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "14px 16px" }}>
                 <span
@@ -517,9 +528,7 @@ export default function BookScreen() {
                 </span>
                 <span style={{ flex: "1", display: "flex", flexDirection: "column", gap: "2px" }}>
                   <span style={{ fontSize: "14px", fontWeight: "700" }}>{"Amma's routine is included"}</span>
-                  <span style={{ fontSize: "13px", color: "#545454" }}>
-                    Walk 9:00 · tea 9:30 · medicine reminder 10:00 · lunch 11:30
-                  </span>
+                  <span style={{ fontSize: "13px", color: "#545454" }}>{v.routine}</span>
                 </span>
                 <Link href="/routine" style={{ fontSize: "13px", fontWeight: "700", textDecoration: "underline" }}>
                   Edit
@@ -541,7 +550,8 @@ export default function BookScreen() {
                     font: "500 14px var(--font-figtree), sans-serif",
                     lineHeight: "1.45",
                   }}
-                  defaultValue="Aunty Rani visits at 10. Please make tea for two."
+                  value={v.note}
+                  onChange={v.setNote}
                 />
               </label>
             </div>
@@ -565,13 +575,13 @@ export default function BookScreen() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <img
-              src="/images/nirmala.png"
+              src={v.cg.avatar}
               alt=""
               style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }}
             />
             <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              <span style={{ fontSize: "15px", fontWeight: "800" }}>Nirmala Perera</span>
-              <span style={{ fontSize: "12px", color: "#545454" }}>★ 4.9 · verified</span>
+              <span style={{ fontSize: "15px", fontWeight: "800" }}>{v.cg.name}</span>
+              <span style={{ fontSize: "12px", color: "#545454" }}>★ {v.cg.rating.toFixed(1)} · verified</span>
             </span>
           </div>{" "}
           <div style={{ border: "1px solid #E2E2E2", borderRadius: "12px", overflow: "hidden" }}>
@@ -588,7 +598,7 @@ export default function BookScreen() {
             <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", fontSize: "14px" }}>
               <span style={{ color: "#545454" }}>
                 {v.hours}
-                {" hrs × LKR 1,200"}
+                {v.rateLine}
               </span>
               <span style={{ fontWeight: "700" }}>{v.sub}</span>
             </div>{" "}
@@ -619,9 +629,7 @@ export default function BookScreen() {
           >
             Continue
           </Link>{" "}
-          <span style={{ fontSize: "12px", color: "#545454", textAlign: "center", marginTop: "-6px" }}>
-            Nothing is charged until Nirmala accepts
-          </span>
+          <span style={{ fontSize: "12px", color: "#545454", textAlign: "center", marginTop: "-6px" }}>{v.until}</span>
         </aside>
       </main>
     </div>

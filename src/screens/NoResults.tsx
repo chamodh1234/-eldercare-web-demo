@@ -1,5 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { mutate } from "@/lib/store";
+
+const clearSearch = () =>
+  mutate((d) => {
+    delete d.ui.search;
+  });
 
 export default function NoResultsScreen() {
   return (
@@ -38,6 +46,7 @@ export default function NoResultsScreen() {
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
           <Link
             href="/search"
+            onClick={clearSearch}
             style={{
               height: "30px",
               padding: "0 12px",
@@ -53,6 +62,7 @@ export default function NoResultsScreen() {
           </Link>
           <Link
             href="/search"
+            onClick={clearSearch}
             style={{
               height: "30px",
               padding: "0 12px",
@@ -68,6 +78,7 @@ export default function NoResultsScreen() {
           </Link>
           <Link
             href="/search"
+            onClick={clearSearch}
             style={{
               height: "30px",
               padding: "0 12px",
@@ -83,6 +94,7 @@ export default function NoResultsScreen() {
           </Link>
           <Link
             href="/search"
+            onClick={clearSearch}
             style={{
               height: "30px",
               padding: "0 12px",
@@ -143,6 +155,7 @@ export default function NoResultsScreen() {
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px" }}>
             <Link
               href="/search"
+              onClick={clearSearch}
               style={{
                 height: "30px",
                 padding: "0 12px",
@@ -158,6 +171,7 @@ export default function NoResultsScreen() {
             </Link>
             <Link
               href="/search"
+              onClick={clearSearch}
               style={{
                 height: "30px",
                 padding: "0 12px",
@@ -173,6 +187,7 @@ export default function NoResultsScreen() {
             </Link>
             <Link
               href="/search"
+              onClick={clearSearch}
               style={{
                 height: "30px",
                 padding: "0 12px",
@@ -190,6 +205,7 @@ export default function NoResultsScreen() {
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "10px", marginTop: "6px" }}>
             <Link
               href="/search"
+              onClick={clearSearch}
               style={{
                 height: "44px",
                 padding: "0 22px",
